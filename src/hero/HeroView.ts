@@ -3,10 +3,8 @@ import { GLSL_COMMON, col, shared } from './materials';
 
 // Size of one art pixel in CSS px for a given viewport width.
 export function pxSize(w: number) {
-  if (w < 520) return 2;
-  if (w < 1100) return 3;
-  if (w < 1900) return 3;
-  return 4;
+  if (w < 2200) return 2;
+  return 3;
 }
 
 const POST_FRAG = /* glsl */ `

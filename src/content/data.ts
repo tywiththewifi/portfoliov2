@@ -52,8 +52,10 @@ export const photos = Array.from({ length: 8 }, (_, i) => ({
 }));
 
 export const services = [
-  { title: 'Product & UI Design', body: 'Interfaces, systems and prototypes, from first sketch to shipped pixels.' },
-  { title: 'Creative Development', body: 'WebGL, motion and interactive sites that people remember.' },
-  { title: 'Brand & Identity', body: 'Visual identities with a point of view, built to live on screens.' },
-  { title: 'Music & Sound', body: 'Beats, sound design and audio for products and film.' },
-];
+  { title: 'Design', body: 'Interfaces, systems and prototypes, from first sketch to shipped pixels.', icon: 'pencil', items: ['Product & UI design', 'Design systems', 'Prototypes'] },
+  { title: 'Develop', body: 'WebGL, motion and interactive sites that people remember.', icon: 'monitor', items: ['Creative development', 'WebGL & 3D', 'Front-end builds'] },
+  { title: 'Brand', body: 'Visual identities with a point of view, built to live on screens.', icon: 'star', items: ['Identity & logo', 'Art direction', 'Print & zines'] },
+  { title: 'Sound', body: 'Beats, sound design and audio for products and film.', icon: 'wave', items: ['Beats & scoring', 'Sound design', 'Sonic branding'] },
+] as const;
+
+export const projectIcons = ['monitor', 'camera', 'note', 'star', 'gear', 'book'] as const;

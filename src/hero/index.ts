@@ -37,7 +37,8 @@ export function createHero(canvas: HTMLCanvasElement, stage: HTMLElement) {
   S.add(mpc.group);
   const turntable = buildTurntable(H.turntable);
   S.add(turntable.group);
-  S.add(buildAudioStack().group);
+  const stack = buildAudioStack();
+  S.add(stack.group);
   const lamp = buildLamp(H.lamp);
   S.add(lamp.group);
   const spider = buildSpiderPlant();
@@ -109,6 +110,14 @@ export function createHero(canvas: HTMLCanvasElement, stage: HTMLElement) {
     }
     const rm = room.rain.material as THREE.ShaderMaterial;
     (rm.uniforms.uMap.value as THREE.Texture).offset.y = (t * 0.9) % 1;
+
+    // VU meters dance harder with the sound on
+    const lvl = soundState.on ? 1 : 0.35;
+    stack.meters.forEach((m, i) => {
+      const v = 0.3 + lvl * (0.45 + 0.35 * Math.abs(Math.sin(t * (7 + i * 1.3)) * Math.sin(t * 2.1 + i)));
+      (m.material as THREE.ShaderMaterial).uniforms.uIntensity.value = v;
+    });
+    (stack.counter.material as THREE.ShaderMaterial).uniforms.uIntensity.value = Math.floor(t * 2) % 2 ? 0.6 : 0.45;
 
     // MPC pads: chase pattern on hover, slow breathing otherwise
     mpc.pads.forEach((p, i) => {

@@ -6,11 +6,11 @@ import { emissive, lit, pixelTexture } from './materials';
 // World units are metres. The back wall sits at z = WALL_Z; the desk top at y = DESK_Y.
 export const WALL_Z = -0.7;
 export const DESK_Y = 0.76;
-export const PX_PER_M = 130; // texel density that matches the low-res render
+export const PX_PER_M = 260; // texel density that matches the low-res render
 
 export const WINDOW = { x0: 1.46, x1: 2.3, y0: 0.98, y1: 2.5 };
 
-function box(w: number, h: number, d: number, mat: THREE.Material, x = 0, y = 0, z = 0) {
+function box(w: number, h: number, d: number, mat: THREE.Material | THREE.Material[], x = 0, y = 0, z = 0) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
   m.position.set(x, y, z);
   return m;
@@ -37,28 +37,58 @@ function collageTexture(wx0: number, wx1: number, wy0: number, wy1: number) {
   g.r(0, 0, W, H, '#b8646a');
   // layer upon layer of flyers so no bare wall shows through
   for (let pass = 0; pass < 3; pass++) {
-    for (let y = -8; y < H; y += 18 + Math.floor(R() * 12)) {
-      for (let x = -8; x < W; x += 16 + Math.floor(R() * 16)) {
-        const w = 18 + Math.floor(R() * 22), h = 22 + Math.floor(R() * 24);
+    for (let y = -16; y < H; y += 36 + Math.floor(R() * 24)) {
+      for (let x = -16; x < W; x += 32 + Math.floor(R() * 32)) {
+        const w = 36 + Math.floor(R() * 44), h = 44 + Math.floor(R() * 48);
         const f = flyer(Math.floor(R() * 1e9), w, h);
-        g.ctx.drawImage(f, x + Math.floor(R() * 6), y + Math.floor(R() * 6));
+        g.ctx.drawImage(f, x + Math.floor(R() * 12), y + Math.floor(R() * 12));
         // tape corner
-        if (R() < 0.35) g.r(x + 2, y, 4, 2, '#f3ecd8');
+        if (R() < 0.35) g.r(x + 4, y, 9, 4, 'rgba(243,236,216,.85)');
       }
     }
   }
   // feature posters
-  const scale = PX_PER_M / 130;
   for (const [id, cx, cy] of WALL_POSTERS) {
     const c = poster(id);
-    const pw = Math.round(PW * scale * 0.82), ph = Math.round(PH * scale * 0.82);
+    const pw = Math.round(PW * 0.86), ph = Math.round(PH * 0.86);
     const x = Math.round((cx - wx0) * PX_PER_M - pw / 2), y = Math.round((wy1 - cy) * PX_PER_M - ph / 2);
-    g.r(x + 2, y + 2, pw, ph, 'rgba(40,10,20,0.45)');
+    g.r(x + 3, y + 4, pw, ph, 'rgba(40,10,20,0.5)');
     g.ctx.drawImage(c, x, y, pw, ph);
-    g.r(x + Math.floor(pw / 2) - 3, y - 1, 6, 3, '#efe6cf');
+    g.r(x + Math.floor(pw / 2) - 7, y - 3, 14, 6, 'rgba(239,230,207,.85)');
+    g.p(x + 3, y + 3, '#c9c2b0'); g.p(x + pw - 4, y + 3, '#c9c2b0');
   }
   const t = pixelTexture(g.canvas);
   return t;
+}
+
+// ---------------------------------------------------------------- wood + spines
+function woodTex(seed: number) {
+  const g = new Pix(128, 16);
+  g.r(0, 0, 128, 16, '#7a3e38');
+  const R = rng(seed);
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 128; x++) {
+    const v = Math.sin(x * 0.08 + Math.sin(y * 0.9 + seed) * 2) + (R() - 0.5) * 0.6;
+    if (v > 0.8) g.p(x, y, '#8a4a40'); else if (v < -0.9) g.p(x, y, '#6a3430');
+  }
+  g.r(0, 0, 128, 1, '#9a5a4a');
+  return pixelTexture(g.canvas);
+}
+
+function spineTex(col: string, seed: number, bw: number, bh: number) {
+  const W = Math.max(8, Math.round(bw * 300)), H = Math.round(bh * 300);
+  const g = new Pix(W, H);
+  const R = rng(seed);
+  g.r(0, 0, W, H, col);
+  g.r(0, 0, 1, H, 'rgba(255,255,255,.25)'); g.r(W - 1, 0, 1, H, 'rgba(0,0,0,.3)');
+  const band = ['#f2e6c8', '#1a1418', '#e8c35a', '#ffffff'][Math.floor(R() * 4)];
+  const style = Math.floor(R() * 3);
+  if (style === 0) { g.r(0, 6, W, 3, band); g.r(0, H - 10, W, 3, band); }
+  if (style === 1) g.r(0, Math.floor(H * 0.15), W, Math.floor(H * 0.2), band);
+  // title as a column of dashes
+  for (let y = Math.floor(H * 0.4); y < H * 0.8; y += 4) g.r(Math.floor(W / 2) - 1, y, 2, 2 + Math.floor(R() * 2), style === 1 ? band : '#f6ecd8');
+  g.r(Math.floor(W / 2) - 2, H - 6, 4, 3, '#f6ecd8');
+  g.grain(0.08, seed);
+  return pixelTexture(g.canvas);
 }
 
 // ---------------------------------------------------------------- city
@@ -203,21 +233,42 @@ export function buildRoom(hover: { shelf: { value: number } }): RoomParts {
   shelf.add(box(sx1 - sx0, 0.035, sd, shelfMat, (sx0 + sx1) / 2, sy + 0.36, WALL_Z + sd / 2));
   shelf.add(box(0.03, 0.36, sd, shelfMat, sx0 + 0.015, sy + 0.18, WALL_Z + sd / 2));
   shelf.add(box(0.03, 0.36, sd, shelfMat, sx1 - 0.015, sy + 0.18, WALL_Z + sd / 2));
+  // shelf wood with grain on the front edge, and brackets
+  shelf.children.forEach((m) => ((m as THREE.Mesh).material = lit({ hover: hover.shelf, map: woodTex(1) })));
+  for (const bxp of [sx0 + 0.12, sx1 - 0.12]) shelf.add(box(0.02, 0.06, sd * 0.8, lit({ color: '#2a1a1a' }), bxp, sy - 0.045, WALL_Z + sd * 0.4));
+
   const books: THREE.Mesh[] = [];
   const bookCols = ['#c9483a', '#3a6ea5', '#e8c35a', '#2f6b4f', '#e6ddc8', '#b0506a', '#1f3a5a', '#e07a4f', '#5a3a6a', '#d8b890', '#3fa89a', '#8a2a2a'];
   const BR = rng(41);
   let bx = sx0 + 0.05;
-  while (bx < sx1 - 0.08) {
+  let n = 0;
+  while (bx < sx1 - 0.2) {
     const bw = 0.026 + BR() * 0.03, bh = 0.2 + BR() * 0.1;
-    const lean = bx > sx1 - 0.3 && BR() < 0.5;
-    const b = box(bw, bh, 0.15 + BR() * 0.04, lit({ color: bookCols[Math.floor(BR() * bookCols.length)], hover: hover.shelf }), bx + bw / 2, sy + 0.0175 + bh / 2, WALL_Z + 0.11);
-    if (lean) { b.rotation.z = -0.25; b.position.x += 0.02; bx += 0.03; }
+    const lean = n > 0 && BR() < 0.08;
+    const col = bookCols[Math.floor(BR() * bookCols.length)];
+    const spine = lit({ hover: hover.shelf, map: spineTex(col, Math.floor(BR() * 1e6), bw, bh) });
+    const b = box(bw, bh, 0.15 + BR() * 0.04, [lit({ color: col, hover: hover.shelf }), lit({ color: col, hover: hover.shelf }), lit({ color: '#efe6d4', hover: hover.shelf }), lit({ color: '#efe6d4', hover: hover.shelf }), spine, spine], bx + bw / 2, sy + 0.0175 + bh / 2, WALL_Z + 0.11);
+    if (lean) { b.rotation.z = -0.22; b.position.x += 0.025; bx += 0.03; }
     b.userData.baseY = b.position.y;
     books.push(b);
     shelf.add(b);
     bx += bw + 0.002;
+    n++;
   }
-  // a couple of records/zines lying flat
+  // bookend + a small horizontal stack, a cassette and a figurine on the right
+  shelf.add(box(0.012, 0.14, 0.12, lit({ color: '#2a2a30', gloss: 0.5 }), bx + 0.01, sy + 0.09, WALL_Z + 0.11));
+  for (let i = 0; i < 3; i++) {
+    const c = bookCols[(i * 5 + 3) % bookCols.length];
+    shelf.add(box(0.16 - i * 0.01, 0.03, 0.14, [lit({ color: '#efe6d4' }), lit({ color: '#efe6d4' }), lit({ color: c }), lit({ color: c }), lit({ color: c }), lit({ color: c })], sx1 - 0.11, sy + 0.033 + i * 0.03, WALL_Z + 0.11));
+  }
+  shelf.add(box(0.1, 0.064, 0.016, lit({ color: '#e8dcc8' }), sx1 - 0.11, sy + 0.15, WALL_Z + 0.08));
+  const fig = new THREE.Group();
+  fig.add(box(0.03, 0.04, 0.02, lit({ color: '#3a9a3a' }), 0, 0.02, 0));
+  fig.add(new THREE.Mesh(new THREE.SphereGeometry(0.014, 8, 6), lit({ color: '#f0c8a0' })).translateY(0.052));
+  fig.add(new THREE.Mesh(new THREE.ConeGeometry(0.014, 0.03, 6), lit({ color: '#3a9a3a' })).translateY(0.075).rotateZ(-0.5));
+  fig.position.set(sx1 - 0.17, sy + 0.2, WALL_Z + 0.1);
+  shelf.add(fig);
+  // records/zines lying flat on top
   shelf.add(box(0.2, 0.012, 0.18, lit({ color: '#1a1216' }), sx1 - 0.15, sy + 0.036 + 0.36, WALL_Z + 0.11));
   shelf.add(box(0.18, 0.012, 0.16, lit({ color: '#e8c35a' }), sx1 - 0.16, sy + 0.05 + 0.36, WALL_Z + 0.11));
   group.add(shelf);

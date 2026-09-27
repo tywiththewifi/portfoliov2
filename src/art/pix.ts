@@ -85,6 +85,57 @@ export class Pix {
     }
   }
 
+  // Filled polygon (even-odd scanline), points as flat [x0,y0,x1,y1,...].
+  poly(pts: number[], c: string) {
+    const n = pts.length / 2;
+    let y0 = Infinity, y1 = -Infinity;
+    for (let i = 0; i < n; i++) { y0 = Math.min(y0, pts[i * 2 + 1]); y1 = Math.max(y1, pts[i * 2 + 1]); }
+    for (let y = Math.floor(y0); y <= Math.ceil(y1); y++) {
+      const xs: number[] = [];
+      for (let i = 0; i < n; i++) {
+        const ax = pts[i * 2], ay = pts[i * 2 + 1], bx = pts[((i + 1) % n) * 2], by = pts[((i + 1) % n) * 2 + 1];
+        if ((ay <= y + 0.5 && by > y + 0.5) || (by <= y + 0.5 && ay > y + 0.5)) xs.push(ax + ((y + 0.5 - ay) / (by - ay)) * (bx - ax));
+      }
+      xs.sort((a, b) => a - b);
+      for (let k = 0; k + 1 < xs.length; k += 2) this.r(Math.round(xs[k]), y, Math.round(xs[k + 1]) - Math.round(xs[k]), 1, c);
+    }
+  }
+
+  // Ellipse shaded like a lit sphere with a banded, dithered ramp (dark -> light).
+  // Light comes from the upper left by default.
+  sphere(cx: number, cy: number, rx: number, ry: number, ramp: string[], lx = -0.55, ly = -0.65) {
+    const n = ramp.length - 1;
+    for (let y = -ry; y <= ry; y++)
+      for (let x = -rx; x <= rx; x++) {
+        const u = x / (rx + 0.5), v = y / (ry + 0.5);
+        const d = u * u + v * v;
+        if (d > 1) continue;
+        const z = Math.sqrt(1 - d);
+        const L = Math.max(0, -u * lx - v * ly + z * 0.55) / 1.25;
+        const f = Math.min(n, L * n + bayer(cx + x, cy + y) - 0.5);
+        this.p(cx + x, cy + y, ramp[Math.max(0, Math.round(f))]);
+      }
+  }
+
+  ring(cx: number, cy: number, r: number, c: string) {
+    for (let a = 0; a < 360; a += 2) this.p(Math.round(cx + Math.cos((a * Math.PI) / 180) * r), Math.round(cy + Math.sin((a * Math.PI) / 180) * r), c);
+  }
+
+  // Sprinkle darker/lighter specks over existing pixels: print grain.
+  grain(amount: number, seed = 1) {
+    const img = this.ctx.getImageData(0, 0, this.w, this.h);
+    const d = img.data;
+    let s = seed;
+    for (let i = 0; i < d.length; i += 4) {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      const r = s / 4294967296;
+      if (d[i + 3] === 0 || r > amount) continue;
+      const k = r < amount / 2 ? 0.86 : 1.1;
+      d[i] = Math.min(255, d[i] * k); d[i + 1] = Math.min(255, d[i + 1] * k); d[i + 2] = Math.min(255, d[i + 2] * k);
+    }
+    this.ctx.putImageData(img, 0, 0);
+  }
+
   // 3x5 bitmap font. Returns the x after the last glyph.
   text(s: string, x: number, y: number, c: string, scale = 1) {
     let cx = x;

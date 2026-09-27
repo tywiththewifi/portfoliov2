@@ -26,33 +26,41 @@
       <canvas id="heroCanvas" class="px" role="img" aria-label="A pixel-art desk at night: a beige CRT computer, an MPC sampler, a turntable, an architect lamp, a hanging spider plant, a floating bookshelf and a wall of posters, with a teal city through the window. Objects light up when you hover them."></canvas>
     </div>
     <div class="hero-copy">
-      <p class="eyebrow pix">▸ designer / developer · open for work</p>
+      <p class="eyebrow">▸ designer / developer · open for work</p>
       <h1><span data-name>Your Name</span> makes interfaces that <em>feel like places.</em></h1>
-      <p class="hero-hint pix"><span class="dot"></span>hover the desk · anything that glows is clickable</p>
     </div>
-    <a class="scroll-cue pix" href="#work">scroll <span aria-hidden="true">↓</span></a>
+    <p class="hero-hint"><span class="dot"></span>hover the desk · anything that glows is clickable</p>
+    <a class="scroll-cue" href="#work">scroll <span aria-hidden="true">↓</span></a>
   </section>
 
   <main>
     <section class="sec" id="work" aria-labelledby="work-h">
-      <div class="sec-head">
-        <p class="label pix">01 / work</p>
-        <h2 id="work-h">Selected <em>work</em></h2>
-        <p class="lede">A few things I've designed and built. The full archive lives on the computer upstairs.</p>
-        <a class="btn" href="#top" data-open-work>Open the computer ↗</a>
+      <div class="sec-top">
+        <div class="sec-head">
+          <p class="label">01 / work</p>
+          <h2 id="work-h">Selected <em>work</em></h2>
+          <p class="lede">A few things I've designed and built. The full archive lives on the computer upstairs.</p>
+          <a class="btn" href="#top" data-open-work>Open the computer ↗</a>
+        </div>
+        <pre class="ascii" data-ascii="cassette"></pre>
       </div>
-      <div class="posters" data-posters="helmets drum"></div>
-      <ol class="work-list" id="workList"></ol>
+      <div class="peg peg-work" id="workBoard">
+        <svg class="peg-link" aria-hidden="true"></svg>
+        <div class="peg-grid" id="workCards"></div>
+      </div>
     </section>
 
-    <section class="sec" id="about" aria-labelledby="about-h">
-      <div class="posters left" data-posters="bolt hero keys"></div>
+    <section class="sec about" id="about" aria-labelledby="about-h">
+      <div class="about-art">
+        <pre class="ascii" data-ascii="cat"></pre>
+        <pre class="ascii" data-ascii="crt"></pre>
+      </div>
       <div class="about-body">
-        <p class="label pix">02 / about</p>
+        <p class="label">02 / about</p>
         <h2 id="about-h">Hi, I'm <em><span data-name>Your Name</span>.</em></h2>
         <p class="lede">I'm a designer who codes, or a developer who draws, depending on the day. I care about tactile software, strange little machines, and making screens feel a bit more like rooms.</p>
         <p>This is placeholder copy. Swap in a few lines about where you're from, what you've worked on, and what you're into right now: records, cameras, synths, books.</p>
-        <dl class="facts">
+        <dl class="facts card-paper">
           <div><dt>Based in</dt><dd id="factLocation"></dd></div>
           <div><dt>Currently</dt><dd>Building portfolio v2</dd></div>
           <div><dt>Listening</dt><dd>Side A of something</dd></div>
@@ -62,30 +70,38 @@
     </section>
 
     <section class="sec" id="services" aria-labelledby="services-h">
-      <div class="sec-head">
-        <p class="label pix">03 / services</p>
-        <h2 id="services-h">What I can <em>help with</em></h2>
+      <div class="sec-top">
+        <div class="sec-head">
+          <p class="label">03 / services</p>
+          <h2 id="services-h">What I can <em>help with</em></h2>
+          <p class="lede">Most projects move across the board from left to right. Pick a column or bring the whole thing.</p>
+        </div>
+        <pre class="ascii" data-ascii="plant"></pre>
       </div>
-      <ul class="services" id="serviceList"></ul>
+      <div class="peg peg-kanban" id="serviceBoard">
+        <svg class="peg-link" aria-hidden="true"></svg>
+      </div>
     </section>
 
     <section class="sec contact" id="contact" aria-labelledby="contact-h">
-      <div class="posters" data-posters="rain crown stones"></div>
       <div class="contact-body">
-        <p class="label pix">04 / contact</p>
+        <p class="label">04 / contact</p>
         <h2 id="contact-h">Got a strange idea? <em>Let's make it.</em></h2>
         <p class="lede">Freelance, full-time, collaborations, or just to trade records. I usually reply within a day or two.</p>
         <a class="mail" id="mailLink" href="#"></a>
         <ul class="socials" id="socials"></ul>
       </div>
+      <div class="contact-art">
+        <pre class="ascii" data-ascii="vinyl"></pre>
+        <pre class="ascii" data-ascii="mug"></pre>
+      </div>
     </section>
   </main>
 
   <footer class="foot">
-    <div class="foot-posters" data-posters="helmets bolt rain crown stones cube drum keys hero" data-small></div>
     <div class="foot-row">
-      <span class="pix">© <span id="year"></span> your name — built at this desk</span>
-      <a class="pix" href="#top">back to the desk ↑</a>
+      <span>© <span id="year"></span> your name — built at this desk</span>
+      <a href="#top">back to the desk ↑</a>
     </div>
   </footer>
 
