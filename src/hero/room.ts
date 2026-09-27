@@ -1,0 +1,228 @@
+import * as THREE from 'three';
+import { Pix } from '../art/pix';
+import { flyer, poster, rng, PW, PH, type PosterId } from '../art/posters';
+import { emissive, lit, pixelTexture } from './materials';
+
+// World units are metres. The back wall sits at z = WALL_Z; the desk top at y = DESK_Y.
+export const WALL_Z = -0.7;
+export const DESK_Y = 0.76;
+export const PX_PER_M = 130; // texel density that matches the low-res render
+
+export const WINDOW = { x0: 1.46, x1: 2.3, y0: 0.98, y1: 2.5 };
+
+function box(w: number, h: number, d: number, mat: THREE.Material, x = 0, y = 0, z = 0) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+  m.position.set(x, y, z);
+  return m;
+}
+
+// ---------------------------------------------------------------- wall art
+// Where each feature poster hangs, as the poster's centre on the wall (metres).
+const WALL_POSTERS: [PosterId, number, number][] = [
+  ['helmets', -0.46, 1.36],
+  ['bolt', 0.0, 1.5],
+  ['crown', 0.46, 1.4],
+  ['rain', -1.3, 1.1],
+  ['hero', -0.88, 1.14],
+  ['keys', 1.2, 1.3],
+  ['drum', 0.86, 1.72],
+  ['stones', -0.1, 1.9],
+  ['cube', 0.42, 1.86],
+];
+
+function collageTexture(wx0: number, wx1: number, wy0: number, wy1: number) {
+  const W = Math.round((wx1 - wx0) * PX_PER_M), H = Math.round((wy1 - wy0) * PX_PER_M);
+  const g = new Pix(W, H);
+  const R = rng(77);
+  g.r(0, 0, W, H, '#b8646a');
+  // layer upon layer of flyers so no bare wall shows through
+  for (let pass = 0; pass < 3; pass++) {
+    for (let y = -8; y < H; y += 18 + Math.floor(R() * 12)) {
+      for (let x = -8; x < W; x += 16 + Math.floor(R() * 16)) {
+        const w = 18 + Math.floor(R() * 22), h = 22 + Math.floor(R() * 24);
+        const f = flyer(Math.floor(R() * 1e9), w, h);
+        g.ctx.drawImage(f, x + Math.floor(R() * 6), y + Math.floor(R() * 6));
+        // tape corner
+        if (R() < 0.35) g.r(x + 2, y, 4, 2, '#f3ecd8');
+      }
+    }
+  }
+  // feature posters
+  const scale = PX_PER_M / 130;
+  for (const [id, cx, cy] of WALL_POSTERS) {
+    const c = poster(id);
+    const pw = Math.round(PW * scale * 0.82), ph = Math.round(PH * scale * 0.82);
+    const x = Math.round((cx - wx0) * PX_PER_M - pw / 2), y = Math.round((wy1 - cy) * PX_PER_M - ph / 2);
+    g.r(x + 2, y + 2, pw, ph, 'rgba(40,10,20,0.45)');
+    g.ctx.drawImage(c, x, y, pw, ph);
+    g.r(x + Math.floor(pw / 2) - 3, y - 1, 6, 3, '#efe6cf');
+  }
+  const t = pixelTexture(g.canvas);
+  return t;
+}
+
+// ---------------------------------------------------------------- city
+function cityLayer(seed: number, w: number, h: number, o: { body: string; lit: string[]; density: number; min: number; max: number; signs?: boolean }) {
+  const g = new Pix(w, h);
+  const R = rng(seed);
+  let x = -2;
+  while (x < w) {
+    const bw = 6 + Math.floor(R() * 14), bh = o.min + Math.floor(R() * (o.max - o.min));
+    g.r(x, h - bh, bw, bh, o.body);
+    if (R() < 0.4) { g.r(x + Math.floor(bw / 2), h - bh - 5, 1, 5, o.body); g.p(x + Math.floor(bw / 2), h - bh - 6, '#ff4a4a'); }
+    for (let yy = h - bh + 2; yy < h; yy += 3)
+      for (let xx = x + 1; xx < x + bw - 1; xx += 2) if (R() < o.density) g.p(xx, yy, o.lit[Math.floor(R() * o.lit.length)]);
+    if (o.signs && R() < 0.35) {
+      const sc = R() < 0.75 ? '#6ff2d8' : '#ff6a5a';
+      const sh = 6 + Math.floor(R() * 10);
+      g.r(x + bw - 3, h - bh + 3, 2, sh, sc);
+    }
+    x += bw + Math.floor(R() * 3);
+  }
+  return pixelTexture(g.canvas);
+}
+
+function skyTexture() {
+  const g = new Pix(64, 96);
+  g.grad(0, 0, 64, 96, ['#08161c', '#0c2229', '#123038', '#1b4448', '#2a5e5a', '#3f7a6c']);
+  const R = rng(3);
+  for (let i = 0; i < 28; i++) g.p(Math.floor(R() * 64), Math.floor(R() * 50), R() < 0.3 ? '#e8fff6' : '#8fc8c0');
+  // a pale moon
+  g.circle(46, 18, 5, '#dff5ea');
+  g.circle(48, 16, 4, '#bfe0d4');
+  return pixelTexture(g.canvas);
+}
+
+export type RoomParts = {
+  group: THREE.Group;
+  shelf: THREE.Group;
+  books: THREE.Mesh[];
+  cars: THREE.Mesh[];
+  rain: THREE.Mesh;
+};
+
+export function buildRoom(hover: { shelf: { value: number } }): RoomParts {
+  const group = new THREE.Group();
+
+  // ---- back wall (with a hole for the window) + side wall + ceiling + floor
+  const wx0 = -2.8, wx1 = 2.8, wy0 = 0, wy1 = 3.0;
+  const collage = collageTexture(wx0, wx1, wy0, wy1);
+  const wallMat = lit({ map: collage });
+  const addWallPiece = (x0: number, x1: number, y0: number, y1: number) => {
+    const geo = new THREE.PlaneGeometry(x1 - x0, y1 - y0);
+    const uv = geo.attributes.uv as THREE.BufferAttribute;
+    for (let i = 0; i < uv.count; i++) {
+      const u = uv.getX(i), v = uv.getY(i);
+      uv.setXY(i, (x0 + u * (x1 - x0) - wx0) / (wx1 - wx0), (y0 + v * (y1 - y0) - wy0) / (wy1 - wy0));
+    }
+    const m = new THREE.Mesh(geo, wallMat);
+    m.position.set((x0 + x1) / 2, (y0 + y1) / 2, WALL_Z);
+    group.add(m);
+  };
+  const W = WINDOW;
+  addWallPiece(wx0, W.x0, wy0, wy1);
+  addWallPiece(W.x1, wx1, wy0, wy1);
+  addWallPiece(W.x0, W.x1, wy0, W.y0);
+  addWallPiece(W.x0, W.x1, W.y1, wy1);
+
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(8, 6), lit({ color: '#3a1c22' }));
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.set(0, 0, 1.5);
+  group.add(floor);
+
+  // ---- window: city layers behind the wall, frame, sill, rain
+  const cityGroup = new THREE.Group();
+  const sky = new THREE.Mesh(new THREE.PlaneGeometry(9, 6), emissive({ map: skyTexture(), intensity: 1 }));
+  sky.position.set(3.2, 2.6, -9);
+  cityGroup.add(sky);
+  const layers = [
+    { z: -7.5, w: 10, h: 4.6, seed: 11, o: { body: '#10302f', lit: ['#3f8f82', '#2f6f66'], density: 0.18, min: 60, max: 150 } },
+    { z: -5.2, w: 7, h: 3.6, seed: 12, o: { body: '#0b2226', lit: ['#8ff2dc', '#4fd0b8', '#ffb46a'], density: 0.26, min: 50, max: 130, signs: true } },
+    { z: -3.2, w: 4.6, h: 2.2, seed: 13, o: { body: '#071619', lit: ['#bafff0', '#ffcf8a', '#ff7a6a'], density: 0.2, min: 30, max: 90, signs: true } },
+  ];
+  for (const L of layers) {
+    const tex = cityLayer(L.seed, Math.round(L.w * 40), Math.round(L.h * 40), L.o);
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(L.w, L.h), emissive({ map: tex }));
+    m.position.set(2.4, L.h / 2 - 0.2, L.z);
+    cityGroup.add(m);
+  }
+  // flying cars: tiny emissive slivers with a tail light
+  const cars: THREE.Mesh[] = [];
+  for (let i = 0; i < 4; i++) {
+    const car = new THREE.Mesh(new THREE.PlaneGeometry(0.09, 0.018), emissive({ color: i % 2 ? '#ff6a5a' : '#dffcff', intensity: 1.2 }));
+    car.position.set(0.8 + i * 0.7, 1.4 + i * 0.35, -4.4 - i * 0.4);
+    car.userData.speed = (i % 2 ? -1 : 1) * (0.18 + i * 0.05);
+    cars.push(car);
+    cityGroup.add(car);
+  }
+  group.add(cityGroup);
+
+  // rain streaks on the glass (animated by offsetting the texture)
+  const rg = new Pix(40, 80);
+  const R = rng(8);
+  for (let i = 0; i < 60; i++) {
+    const x = Math.floor(R() * 40), y = Math.floor(R() * 80);
+    rg.r(x, y, 1, 2 + Math.floor(R() * 3), R() < 0.3 ? '#bfeee6' : '#5fa8a0');
+  }
+  const rainTex = pixelTexture(rg.canvas);
+  rainTex.wrapS = rainTex.wrapT = THREE.RepeatWrapping;
+  const rainMat = emissive({ map: rainTex, intensity: 0.8 });
+  rainMat.transparent = false;
+  const rain = new THREE.Mesh(new THREE.PlaneGeometry(W.x1 - W.x0, W.y1 - W.y0), rainMat);
+  rain.position.set((W.x0 + W.x1) / 2, (W.y0 + W.y1) / 2, WALL_Z - 0.02);
+  group.add(rain);
+
+  const frameMat = lit({ color: '#4a2a2c' });
+  const fw = 0.06;
+  group.add(box(W.x1 - W.x0 + fw * 2, fw, 0.1, frameMat, (W.x0 + W.x1) / 2, W.y1 + fw / 2, WALL_Z));
+  group.add(box(fw, W.y1 - W.y0, 0.1, frameMat, W.x0 - fw / 2, (W.y0 + W.y1) / 2, WALL_Z));
+  group.add(box(fw, W.y1 - W.y0, 0.1, frameMat, W.x1 + fw / 2, (W.y0 + W.y1) / 2, WALL_Z));
+  group.add(box(0.035, W.y1 - W.y0, 0.06, frameMat, (W.x0 + W.x1) / 2, (W.y0 + W.y1) / 2, WALL_Z));
+  group.add(box(W.x1 - W.x0, 0.035, 0.06, frameMat, (W.x0 + W.x1) / 2, W.y0 + (W.y1 - W.y0) * 0.55, WALL_Z));
+  group.add(box(W.x1 - W.x0 + 0.2, 0.05, 0.22, lit({ color: '#6a3a38' }), (W.x0 + W.x1) / 2, W.y0 - 0.025, WALL_Z + 0.08));
+
+  // ---- desk
+  const deskMat = lit({ color: '#8f4f48' });
+  const deskEdge = lit({ color: '#6e3a36' });
+  group.add(box(3.4, 0.045, 0.95, deskMat, -0.15, DESK_Y - 0.0225, WALL_Z + 0.475));
+  group.add(box(3.4, 0.06, 0.04, deskEdge, -0.15, DESK_Y - 0.05, WALL_Z + 0.95));
+  const shadow = new THREE.Mesh(new THREE.PlaneGeometry(3.4, DESK_Y - 0.05), lit({ color: '#1c0c12' }));
+  shadow.position.set(-0.15, (DESK_Y - 0.05) / 2, WALL_Z + 0.01);
+  group.add(shadow);
+  const under = lit({ color: '#2a1418' });
+  group.add(box(0.5, 0.7, 0.8, under, -1.35, 0.35, WALL_Z + 0.45));
+  group.add(box(0.5, 0.7, 0.8, under, 1.05, 0.35, WALL_Z + 0.45));
+  group.add(box(0.04, 0.02, 0.2, lit({ color: '#b98a6a' }), -1.35, 0.55, WALL_Z + 0.86));
+  group.add(box(0.04, 0.02, 0.2, lit({ color: '#b98a6a' }), 1.05, 0.55, WALL_Z + 0.86));
+
+  // ---- floating bookshelf, upper left
+  const shelf = new THREE.Group();
+  const shelfMat = lit({ color: '#7a3e38', hover: hover.shelf });
+  const sx0 = -1.5, sx1 = -0.36, sy = 1.42, sd = 0.22;
+  shelf.add(box(sx1 - sx0, 0.035, sd, shelfMat, (sx0 + sx1) / 2, sy, WALL_Z + sd / 2));
+  shelf.add(box(sx1 - sx0, 0.035, sd, shelfMat, (sx0 + sx1) / 2, sy + 0.36, WALL_Z + sd / 2));
+  shelf.add(box(0.03, 0.36, sd, shelfMat, sx0 + 0.015, sy + 0.18, WALL_Z + sd / 2));
+  shelf.add(box(0.03, 0.36, sd, shelfMat, sx1 - 0.015, sy + 0.18, WALL_Z + sd / 2));
+  const books: THREE.Mesh[] = [];
+  const bookCols = ['#c9483a', '#3a6ea5', '#e8c35a', '#2f6b4f', '#e6ddc8', '#b0506a', '#1f3a5a', '#e07a4f', '#5a3a6a', '#d8b890', '#3fa89a', '#8a2a2a'];
+  const BR = rng(41);
+  let bx = sx0 + 0.05;
+  while (bx < sx1 - 0.08) {
+    const bw = 0.026 + BR() * 0.03, bh = 0.2 + BR() * 0.1;
+    const lean = bx > sx1 - 0.3 && BR() < 0.5;
+    const b = box(bw, bh, 0.15 + BR() * 0.04, lit({ color: bookCols[Math.floor(BR() * bookCols.length)], hover: hover.shelf }), bx + bw / 2, sy + 0.0175 + bh / 2, WALL_Z + 0.11);
+    if (lean) { b.rotation.z = -0.25; b.position.x += 0.02; bx += 0.03; }
+    b.userData.baseY = b.position.y;
+    books.push(b);
+    shelf.add(b);
+    bx += bw + 0.002;
+  }
+  // a couple of records/zines lying flat
+  shelf.add(box(0.2, 0.012, 0.18, lit({ color: '#1a1216' }), sx1 - 0.15, sy + 0.036 + 0.36, WALL_Z + 0.11));
+  shelf.add(box(0.18, 0.012, 0.16, lit({ color: '#e8c35a' }), sx1 - 0.16, sy + 0.05 + 0.36, WALL_Z + 0.11));
+  group.add(shelf);
+
+  return { group, shelf, books, cars, rain };
+}
+
+export { PW, PH };

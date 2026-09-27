@@ -1,7 +1,22 @@
 // Tiny pixel painter for procedurally drawn sprites (placeholders until the
 // generated art layers are in).
 
-const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => (v + 0.5) / 16);
+const FONT: Record<string, string> = {
+  A: '010101111101101', B: '110101110101110', C: '011100100100011', D: '110101101101110',
+  E: '111100110100111', F: '111100110100100', G: '011100101101011', H: '101101111101101',
+  I: '111010010010111', J: '001001001101010', K: '101101110101101', L: '100100100100111',
+  M: '101111111101101', N: '111101101101101', O: '010101101101010', P: '110101110100100',
+  Q: '010101101110011', R: '110101110101101', S: '011100010001110', T: '111010010010010',
+  U: '101101101101111', V: '101101101101010', W: '101101111111101', X: '101101010101101',
+  Y: '101101010010010', Z: '111001010100111',
+  0: '111101101101111', 1: '010110010010111', 2: '110001010100111', 3: '110001010001110',
+  4: '101101111001001', 5: '111100110001110', 6: '011100111101111', 7: '111001010010010',
+  8: '111101111101111', 9: '111101111001110', ' ': '000000000000000',
+  '/': '001001010100100', ':': '000010000010000', '.': '000000000000010', '-': '000000111000000',
+  '!': '010010010000010', '+': '000010111010000', "'": '010010000000000', '&': '010101010101011',
+};
+
+const BAYER =[0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => (v + 0.5) / 16);
 export const bayer = (x: number, y: number) => BAYER[(y & 3) * 4 + (x & 3)];
 
 export class Pix {
@@ -54,6 +69,36 @@ export class Pix {
   dens(x: number, y: number, w: number, h: number, c: string, d: number) {
     for (let j = 0; j < h; j++)
       for (let i = 0; i < w; i++) if (bayer(x + i, y + j) < d) this.p(x + i, y + j, c);
+  }
+
+  line(x0: number, y0: number, x1: number, y1: number, c: string) {
+    x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1);
+    const dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0);
+    const sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+    let e = dx + dy;
+    for (;;) {
+      this.p(x0, y0, c);
+      if (x0 === x1 && y0 === y1) break;
+      const e2 = 2 * e;
+      if (e2 >= dy) { e += dy; x0 += sx; }
+      if (e2 <= dx) { e += dx; y0 += sy; }
+    }
+  }
+
+  // 3x5 bitmap font. Returns the x after the last glyph.
+  text(s: string, x: number, y: number, c: string, scale = 1) {
+    let cx = x;
+    for (const ch of s.toUpperCase()) {
+      const g = FONT[ch] ?? FONT[' '];
+      for (let j = 0; j < 5; j++)
+        for (let i = 0; i < 3; i++) if (g[j * 3 + i] === '1') this.r(cx + i * scale, y + j * scale, scale, scale, c);
+      cx += 4 * scale;
+    }
+    return cx;
+  }
+
+  textWidth(s: string, scale = 1) {
+    return s.length * 4 * scale - scale;
   }
 
   // Add a 1px dark outline around every opaque pixel.
