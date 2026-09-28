@@ -10,8 +10,8 @@ export function pxSize(w: number) {
 const POST_FRAG = /* glsl */ `
   ${GLSL_COMMON}
   uniform sampler2D tColor; uniform sampler2D tDepth; uniform vec2 uRes;
-  uniform float uNear, uFar, uFade, uBloom, uTime, uVignette, uExposure;
-  uniform vec3 uBg, uBloomCol, uGrade;
+  uniform float uNear, uFar, uFade, uBloom, uTime, uVignette, uExposure, uFogDen, uFogStart, uOutlineFar;
+  uniform vec3 uBg, uBloomCol, uGrade, uFogCol;
   float isEm(vec4 t){ return (t.a > .4 && t.a < .9) ? 1. : 0.; }
   float dist(vec2 uv){ float d = texture(tDepth, uv).x; return -(uNear * uFar) / ((uFar - uNear) * d - uFar); }
   void main(){
@@ -31,10 +31,20 @@ const POST_FRAG = /* glsl */ `
     float gq = floor(gs * .55 + bayer4(gl_FragCoord.xy)) / 5.;
     c += mix(uBloomCol, glowCol, .6) * gq * uBloom * (1. - isEm(s0) * .7);
 
-    // ink outlines where depth jumps (objects in front of the wall)
+    // ink outlines where depth jumps, only on nearby things so a field of
+    // grass doesn't turn into scribble
+    float raw = texture(tDepth, uv).x;
     float d = dist(uv);
     float dm = max(max(dist(uv + vec2(px.x, 0.)), dist(uv - vec2(px.x, 0.))), max(dist(uv + vec2(0., px.y)), dist(uv - vec2(0., px.y))));
-    if (dm - d > max(.06, d * .05)) c *= .55;
+    if (d < uOutlineFar && dm - d > max(.06, d * .05)) c *= .55;
+
+    // aerial perspective: distance haze, stepped with a dither so it bands
+    // like the rest of the pixel shading (the sky has no depth and is skipped)
+    if (raw < .99999 && uFogDen > 0.) {
+      float f = 1. - exp(-max(d - uFogStart, 0.) * uFogDen);
+      f = floor(f * 10. + bayer4(gl_FragCoord.xy)) / 10.;
+      c = mix(c, uFogCol, f);
+    }
 
     // soft vignette
     vec2 q = uv - .5; c *= 1. - dot(q, q) * uVignette;
@@ -61,6 +71,7 @@ export class HeroView {
   private postScene = new THREE.Scene();
   private postCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
   private ticks: Tick[] = [];
+  private pre: (() => void)[] = [];
   private running = false;
   private last = 0;
   P = 3;
@@ -86,7 +97,7 @@ export class HeroView {
     r.outputColorSpace = THREE.LinearSRGBColorSpace;
     r.setClearColor(0x1a0d12, 1);
 
-    this.camera = new THREE.PerspectiveCamera(this.rig.fov, 16 / 9, 0.05, 60);
+    this.camera = new THREE.PerspectiveCamera(this.rig.fov, 16 / 9, 0.05, 260);
 
     this.rt = new THREE.WebGLRenderTarget(4, 4, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter });
     this.rt.depthTexture = new THREE.DepthTexture(4, 4);
@@ -106,6 +117,10 @@ export class HeroView {
         uGrade: { value: new THREE.Vector3(1, 1, 1) },
         uExposure: { value: 1 },
         uVignette: { value: 0.9 },
+        uFogCol: { value: col('#9fb8a0') },
+        uFogDen: { value: 0 },
+        uFogStart: { value: 3 },
+        uOutlineFar: { value: 1000 },
         uTime: shared.uTime,
       },
       vertexShader: 'void main(){ gl_Position = vec4(position.xy, 0., 1.); }',
@@ -204,8 +219,19 @@ export class HeroView {
     return { x: ((v.x + 1) / 2) * this.lw * this.P, y: ((1 - v.y) / 2) * this.lh * this.P, z: v.z };
   }
 
+  // Hook for passes that must run right before the main render (sun shadow).
+  beforeRender(fn: () => void) {
+    this.pre.push(fn);
+  }
+
+  // Draw one frame now, e.g. after a scene change while paused.
+  renderOnce() {
+    if (!this.running) this.render();
+  }
+
   render() {
     const r = this.renderer;
+    for (const fn of this.pre) fn();
     r.setRenderTarget(this.rt);
     r.clear();
     r.render(this.scene, this.camera);

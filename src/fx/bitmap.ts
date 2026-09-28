@@ -98,7 +98,7 @@ function ridges(W: number, H: number): Bits {
 const KEY = new THREE.Vector3(1.2, 1.6, 2.0);
 const RIM = new THREE.Vector3(-2.2, 0.4, -1.2);
 const FILL = new THREE.Vector3(-2.0, -0.6, 1.4);
-const LIGHT_KEYS = ['uAmb', 'uTime', 'uLampPos', 'uLampDir', 'uLampI', 'uWinPos', 'uWinI', 'uFillPos', 'uFillI', 'uScrI', 'uLevels'] as const;
+const LIGHT_KEYS = ['uAmb', 'uTime', 'uLampPos', 'uLampDir', 'uLampI', 'uWinPos', 'uWinI', 'uFillPos', 'uFillI', 'uScrI', 'uLevels', 'uSunI', 'uHemiI', 'uShadowOn', 'uGoboOn'] as const;
 
 function knot() {
   return new THREE.Mesh(new THREE.TorusKnotGeometry(1, 0.3, 260, 28, 2, 3), lit({ color: '#ffffff' }));
@@ -129,6 +129,10 @@ function render3D(r: THREE.WebGLRenderer, model: THREE.Object3D, W: number, H: n
   shared.uScrI.value = 0;
   shared.uLevels.value = 40;
   shared.uAmb.value.setRGB(0.02, 0.02, 0.02);
+  shared.uSunI.value = 0;
+  shared.uHemiI.value = 0;
+  shared.uShadowOn.value = 0;
+  shared.uGoboOn.value = 0;
   const rt = new THREE.WebGLRenderTarget(W, H, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter });
   const buf = new Uint8Array(W * H * 4);
   r.setRenderTarget(rt);

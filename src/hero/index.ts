@@ -1,7 +1,11 @@
 import * as THREE from 'three';
 import { HeroView } from './HeroView';
-import { shared } from './materials';
-import { buildRoom, DESK_Y as DESK_TOP, type WallArt } from './room';
+import { col, shared } from './materials';
+import { DESK_Y as DESK_TOP, WALL_Z, type WallArt } from './room';
+import { buildBookcase, buildChair, buildHook, buildTable } from './outdoor/furniture';
+import { SunShadow, castShadows } from './outdoor/shadow';
+import { buildClearing } from './scenes/clearing';
+import type { OutdoorScene, SceneBuilder, SceneId } from './scenes/types';
 import {
   buildAudioStack, buildCamera, buildComputer, buildDeskClutter, buildLamp, buildMPC,
   buildPothos, buildSpiderPlant, buildTurntable, makeScreen,
@@ -26,8 +30,18 @@ export function createHero(canvas: HTMLCanvasElement, stage: HTMLElement, art: W
     computer: { value: 0 }, shelf: { value: 0 }, mpc: { value: 0 }, camera: { value: 0 }, lamp: { value: 0 }, turntable: { value: 0 },
   };
 
-  const room = buildRoom({ shelf: H.shelf }, art);
-  S.add(room.group);
+  // the desk, now a freestanding table outdoors, with the chair from the
+  // photo and a bookcase standing in the grass
+  const table = buildTable({ top: '#cdc6b4', edge: '#a8a090', legs: '#7a7c80' });
+  S.add(castShadows(table));
+  const chair = buildChair();
+  // pushed back from the desk end, as if someone just stood up
+  chair.position.set(1.4, 0, 0.85);
+  chair.rotation.y = -2.35;
+  S.add(castShadows(chair));
+  const shelf = buildBookcase(H.shelf, new THREE.Vector3(-2.35, 0, WALL_Z + 0.25));
+  shelf.group.rotation.y = 0.35;
+  S.add(castShadows(shelf.group));
 
   const screen = makeScreen();
   const computer = buildComputer(H.computer, screen.tex);
@@ -42,16 +56,20 @@ export function createHero(canvas: HTMLCanvasElement, stage: HTMLElement, art: W
   S.add(lamp.group);
   const spider = buildSpiderPlant();
   S.add(spider.group);
-  // trailing pothos on top of the bookshelf, near its left end
-  const pothos = buildPothos(new THREE.Vector3(-1.14, 1.7075, -0.59), { scale: 1.2, drop: 0.36, front: 0.096, side: -0.3 });
+  // spider plant hangs from a shepherd's hook planted beside the desk
+  S.add(castShadows(buildHook(new THREE.Vector3(1.78, 0, -0.18), new THREE.Vector3(1.0, 2.55, -0.18))));
+  // trailing pothos on top of the bookcase
+  const pothos = buildPothos(shelf.top.clone().add(new THREE.Vector3(0.12, 0, 0.02)), { scale: 1.1, drop: 0.5, front: 0.14, side: -0.36 });
+  pothos.group.rotation.y = 0.35;
   S.add(pothos.group);
   const camera = buildCamera(H.camera);
   S.add(camera.group);
   S.add(buildDeskClutter().group);
+  for (const g of [computer.group, mpc.group, turntable.group, stack.group, lamp.group, camera.group]) castShadows(g);
 
   const hotspots: Hotspot[] = [
     { id: 'computer', label: 'Work', hint: 'open projects', hover: H.computer, target: 0, object: computer.group, anchor: () => computer.screenCenter.clone().add(new THREE.Vector3(0, 0.21, 0)) },
-    { id: 'bookshelf', label: 'Bookshelf', hint: 'favourite books', hover: H.shelf, target: 0, object: room.shelf, anchor: () => new THREE.Vector3(-0.93, 1.77, -0.6) },
+    { id: 'bookshelf', label: 'Bookshelf', hint: 'favourite books', hover: H.shelf, target: 0, object: shelf.group, anchor: () => shelf.top.clone().add(new THREE.Vector3(0, 0.12, 0)) },
     { id: 'mpc', label: 'MPC', hint: 'play the pads', hover: H.mpc, target: 0, object: mpc.group, anchor: () => new THREE.Vector3(-0.72, 0.92, -0.18) },
     { id: 'camera', label: 'Camera', hint: 'photo roll', hover: H.camera, target: 0, object: camera.group, anchor: () => camera.group.position.clone().add(new THREE.Vector3(0, 0.14, 0)) },
     { id: 'turntable', label: 'Turntable', hint: 'sound on / off', hover: H.turntable, target: 0, object: turntable.group, anchor: () => new THREE.Vector3(-1.22, 0.98, -0.24) },
@@ -126,7 +144,7 @@ export function createHero(canvas: HTMLCanvasElement, stage: HTMLElement, art: W
     shared.uLampDir.value.set(0, -1, 0).applyQuaternion(tmpQ).normalize();
     const flick = lampState.flicker > 0 ? (Math.random() < 0.5 ? 0.3 : 1) : 1;
     lampState.flicker = Math.max(0, lampState.flicker - dt);
-    const lampTarget = (lampState.on ? 1 : 0.1) * flick * (1 + lh * 0.25);
+    const lampTarget = (lampState.on ? lampScale : 0.05) * flick * (1 + lh * 0.25);
     shared.uLampI.value += (lampTarget - shared.uLampI.value) * Math.min(1, dt * 12);
     bulbMat.uniforms.uIntensity.value = 0.2 + shared.uLampI.value * 1.1;
     innerMat.uniforms.uIntensity.value = 0.15 + shared.uLampI.value * 0.85;
@@ -142,17 +160,10 @@ export function createHero(canvas: HTMLCanvasElement, stage: HTMLElement, art: W
     const rp = 0.008 + near(pothos.center) * 0.035;
     pothos.mats.forEach((mm) => (mm.uniforms.uWind.value += (rp - mm.uniforms.uWind.value) * Math.min(1, dt * 2)));
 
-    // CRT, record, city
+    // CRT, record
     screen.draw(t, H.computer.value, view.rig.zoom > 0.9);
     spin += ((soundState.on ? 3.5 : 0.25) - spin) * Math.min(1, dt * 2);
     turntable.platter.rotation.y -= dt * spin;
-    for (const car of room.cars) {
-      car.position.x += car.userData.speed * dt;
-      if (car.position.x > 5) car.position.x = -0.5;
-      if (car.position.x < -0.5) car.position.x = 5;
-    }
-    const rm = room.rain.material as THREE.ShaderMaterial;
-    (rm.uniforms.uMap.value as THREE.Texture).offset.y = (t * 0.9) % 1;
 
     // VU meters dance harder with the sound on
     const lvl = soundState.on ? 1 : 0.35;
@@ -176,12 +187,71 @@ export function createHero(canvas: HTMLCanvasElement, stage: HTMLElement, art: W
     camera.group.position.y = 0.76 + Math.max(0, Math.sin(t * 10)) * 0.012 * H.camera.value;
 
     // books nudge on hover
-    room.books.forEach((b, i) => {
+    shelf.books.forEach((b, i) => {
       b.position.y = b.userData.baseY + Math.max(0, Math.sin(t * 4 - i * 0.5)) ** 8 * 0.02 * H.shelf.value;
     });
   });
 
+  // ---------------------------------------------------------------- scenes
+  const BUILDERS: Record<SceneId, SceneBuilder> = { clearing: buildClearing, meadow: buildClearing, lake: buildClearing };
+  const built = new Map<SceneId, OutdoorScene>();
+  const sun = new SunShadow(2048);
+  let current: OutdoorScene | null = null;
+  let lampScale = 1;
+  const setScene = (id: SceneId) => {
+    if (!built.has(id)) built.set(id, BUILDERS[id](art));
+    const sc = built.get(id)!;
+    if (current) S.remove(current.group);
+    S.add(sc.group);
+    current = sc;
+    // light
+    shared.uSunDir.value.copy(sc.sun.dir).normalize();
+    shared.uSunCol.value.set(col(sc.sun.col));
+    shared.uSunI.value = sc.sun.i;
+    shared.uSkyCol.value.set(col(sc.hemi.sky));
+    shared.uGroundCol.value.set(col(sc.hemi.ground));
+    shared.uHemiI.value = sc.hemi.i;
+    shared.uAmb.value.set(col(sc.amb));
+    shared.uWinI.value = sc.rim?.i ?? 0;
+    if (sc.rim) { shared.uWinPos.value.copy(sc.rim.pos); shared.uWinCol.value.set(col(sc.rim.col)); }
+    shared.uFillI.value = sc.fill?.i ?? 0;
+    if (sc.fill) { shared.uFillPos.value.copy(sc.fill.pos); shared.uFillCol.value.set(col(sc.fill.col)); }
+    shared.uScrI.value = sc.screenI ?? 0.35;
+    lampScale = sc.lampI ?? 1;
+    shared.uGoboOn.value = sc.gobo ? 1 : 0;
+    if (sc.gobo) { shared.uGobo.value = sc.gobo.tex; shared.uGoboScale.value = sc.gobo.scale; }
+    shared.uShadowOn.value = 1;
+    shared.uLevels.value = 8;
+    sun.aim(sc.sun.dir, sc.shadow.center, sc.shadow.half);
+    // haze + post grade
+    const pu = view.post.uniforms;
+    pu.uFogCol.value.set(col(sc.fog.col));
+    pu.uFogDen.value = sc.fog.den;
+    pu.uFogStart.value = sc.fog.start;
+    pu.uBloomCol.value.set(col(sc.post.bloomCol));
+    pu.uBloom.value = sc.post.bloom;
+    pu.uVignette.value = sc.post.vignette;
+    pu.uOutlineFar.value = sc.post.outlineFar;
+    pu.uGrade.value.set(...(sc.post.grade ?? [1, 1, 1]));
+    // camera
+    view.rig.pos.copy(sc.camera.pos);
+    view.rig.look.copy(sc.camera.look);
+    view.rig.fov = sc.camera.fov;
+    view.updateCamera();
+    stage.dataset.scene = id;
+    view.renderOnce();
+  };
+  view.onTick((t, dt) => {
+    if (!current) return;
+    current.tick?.(t, dt, view.camera);
+    if (current.gobo) shared.uGoboOff.value.set(t * current.gobo.drift[0], t * current.gobo.drift[1]);
+  });
+  // the sun's depth map is rendered right before each frame
+  view.beforeRender(() => sun.render(view.renderer, S));
+
   return {
+    setScene,
+    scene: () => current?.id ?? null,
     view, hotspots, computer, camera, lampState, mpc, soundState,
     // Keyboard: nudge the lamp head by (dx, dy) metres.
     aimLamp(dx: number, dy: number) {

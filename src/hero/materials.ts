@@ -25,6 +25,21 @@ export const shared = {
   uFillCol: { value: col('#ff7a96') },
   uFillI: { value: 0.4 },
   uLevels: { value: 7 },
+  // outdoors: sun (with shadow map and a moving canopy "gobo") and sky light
+  uSunDir: { value: new THREE.Vector3(0.4, 0.8, 0.3).normalize() },
+  uSunCol: { value: col('#fff2d6') },
+  uSunI: { value: 0 },
+  uSkyCol: { value: col('#9fd0ff') },
+  uGroundCol: { value: col('#3a4a22') },
+  uHemiI: { value: 0 },
+  uShadowMap: { value: null as THREE.Texture | null },
+  uShadowMat: { value: new THREE.Matrix4() },
+  uShadowOn: { value: 0 },
+  uShadowTexel: { value: 1 / 2048 },
+  uGobo: { value: null as THREE.Texture | null },
+  uGoboOn: { value: 0 },
+  uGoboScale: { value: 0.25 },
+  uGoboOff: { value: new THREE.Vector2() },
 };
 
 export const GLSL_COMMON = /* glsl */ `
@@ -40,18 +55,30 @@ export const GLSL_COMMON = /* glsl */ `
 const LIT_VERT = /* glsl */ `
   uniform float uTime; uniform float uWind; uniform float uWindAnchor;
   attribute float aPhase;
-  varying vec3 vN; varying vec3 vW; varying vec2 vUv;
+  varying vec3 vN; varying vec3 vW; varying vec2 vUv; varying vec3 vTint;
   void main(){
     vUv = uv;
-    vec4 wp = modelMatrix * vec4(position, 1.);
+    vTint = vec3(1.);
+    #ifdef USE_INSTANCING_COLOR
+      vTint = instanceColor;
+    #endif
+    mat4 mm = modelMatrix;
+    #ifdef USE_INSTANCING
+      mm = modelMatrix * instanceMatrix;
+    #endif
+    vec4 wp = mm * vec4(position, 1.);
     #ifdef WIND
       float ph = aPhase + wp.x * 3.1 + wp.z * 2.3;
-      float h = max(uWindAnchor - wp.y, 0.) + max(wp.y - uWindAnchor, 0.) * .4;
+      #ifdef GRASS
+        float h = uv.y * uv.y; // blades: tips move, roots stay planted
+      #else
+        float h = max(uWindAnchor - wp.y, 0.) + max(wp.y - uWindAnchor, 0.) * .4;
+      #endif
       wp.x += (sin(uTime * 1.7 + ph) + .45 * sin(uTime * 3.1 + ph * 2.1)) * uWind * h;
       wp.z += cos(uTime * 1.3 + ph * 1.2) * uWind * .6 * h;
     #endif
     vW = wp.xyz;
-    vN = normalize(mat3(modelMatrix) * normal);
+    vN = normalize(mat3(mm) * normal);
     gl_Position = projectionMatrix * viewMatrix * wp;
   }
 `;
@@ -62,16 +89,46 @@ const LIT_FRAG = /* glsl */ `
   uniform vec3 uLampPos, uLampDir, uLampCol, uWinPos, uWinCol, uScrPos, uScrCol, uAmb, uFillPos, uFillCol;
   uniform float uLampI, uWinI, uScrI, uFillI, uLevels, uTime, uHover, uGloss;
   uniform vec3 uHoverCol;
-  varying vec3 vN; varying vec3 vW; varying vec2 vUv;
+  uniform vec3 uSunDir, uSunCol, uSkyCol, uGroundCol;
+  uniform float uSunI, uHemiI, uShadowOn, uShadowTexel, uGoboOn, uGoboScale, uRootShade;
+  uniform sampler2D uShadowMap, uGobo; uniform mat4 uShadowMat; uniform vec2 uGoboOff;
+  varying vec3 vN; varying vec3 vW; varying vec2 vUv; varying vec3 vTint;
+
+  // 3x3 PCF against the sun's depth map
+  float sunShadow(vec3 w){
+    if (uShadowOn < .5) return 1.;
+    vec4 s = uShadowMat * vec4(w, 1.);
+    vec3 p = s.xyz / s.w * .5 + .5;
+    if (p.x < 0. || p.x > 1. || p.y < 0. || p.y > 1. || p.z > 1.) return 1.;
+    float sh = 0.;
+    for (int i = -1; i <= 1; i++) for (int j = -1; j <= 1; j++)
+      sh += step(p.z - .0025, texture2D(uShadowMap, p.xy + vec2(float(i), float(j)) * uShadowTexel).x);
+    return sh / 9.;
+  }
+  // leafy light pattern projected down the sun direction (canopy dapple)
+  float gobo(vec3 w){
+    if (uGoboOn < .5) return 1.;
+    vec2 q = (w.xz - uSunDir.xz / max(uSunDir.y, .25) * w.y) * uGoboScale + uGoboOff;
+    return texture2D(uGobo, q).r;
+  }
+
   void main(){
-    vec3 base = uColor;
+    vec3 base = uColor * vTint;
     if (uHasMap > .5) {
       vec4 t = texture2D(uMap, vUv);
       if (t.a < .5) discard;
       base *= t.rgb;
     }
+    // grass: darker toward the root
+    base *= mix(1. - uRootShade, 1., vUv.y);
     vec3 n = normalize(vN);
     if (!gl_FrontFacing) n = -n;
+
+    // sun + sky: wrap lighting on thin things (grass, leaves) so they glow
+    float ndl = dot(n, uSunDir);
+    float wrap = uRootShade > 0. ? .55 + .45 * max(ndl, 0.) : max(ndl, 0.);
+    float sun = wrap * sunShadow(vW) * gobo(vW) * uSunI;
+    vec3 hemi = mix(uGroundCol, uSkyCol, n.y * .5 + .5) * uHemiI;
 
     // desk lamp: spot-ish point light
     vec3 Lv = uLampPos - vW; float d = length(Lv); vec3 L = Lv / d;
@@ -90,7 +147,7 @@ const LIT_FRAG = /* glsl */ `
     vec3 Fv = uFillPos - vW; float df = length(Fv);
     float fill = (max(dot(n, Fv / df), 0.) * .8 + .2) * uFillI / (1. + df * df * .5);
 
-    vec3 light = uAmb + uLampCol * lamp * 2.6 + uWinCol * win + uScrCol * scr + uFillCol * fill;
+    vec3 light = uAmb + hemi + uSunCol * sun + uLampCol * lamp * 2.6 + uWinCol * win + uScrCol * scr + uFillCol * fill;
     // specular glint from the lamp for glossy things (CRT glass, vinyl)
     vec3 V = normalize(cameraPosition - vW);
     float spec = pow(max(dot(reflect(-L, n), V), 0.), 24.) * uGloss * uLampI;
@@ -119,6 +176,8 @@ const EMIS_FRAG = /* glsl */ `
 `;
 
 export type LitOpts = {
+  rootShade?: number;
+  grass?: boolean;
   color?: string;
   map?: THREE.Texture | null;
   wind?: number;
@@ -140,8 +199,9 @@ export function lit(o: LitOpts = {}) {
       uGloss: { value: o.gloss ?? 0 },
       uHover: o.hover ?? { value: 0 },
       uHoverCol: { value: col('#ffe2b8') },
+      uRootShade: { value: o.rootShade ?? 0 },
     },
-    defines: o.wind ? { WIND: 1 } : {},
+    defines: o.grass ? { WIND: 1, GRASS: 1 } : o.wind ? { WIND: 1 } : {},
     vertexShader: LIT_VERT,
     fragmentShader: LIT_FRAG,
     side: o.side ?? THREE.FrontSide,
@@ -159,6 +219,18 @@ export function emissive(o: { color?: string; map?: THREE.Texture | null; intens
     },
     vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }',
     fragmentShader: EMIS_FRAG,
+  });
+}
+
+// Unlit colour/texture, for painted backdrop layers (the post pass adds
+// distance haze). Cut-out on the texture's alpha.
+export function flat(o: { color?: string; map?: THREE.Texture | null; side?: THREE.Side } = {}) {
+  return new THREE.ShaderMaterial({
+    uniforms: { uColor: { value: col(o.color ?? '#ffffff') }, uMap: { value: o.map ?? null }, uHasMap: { value: o.map ? 1 : 0 } },
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }',
+    fragmentShader: `uniform vec3 uColor; uniform sampler2D uMap; uniform float uHasMap; varying vec2 vUv;
+      void main(){ vec3 c = uColor; if (uHasMap > .5) { vec4 t = texture2D(uMap, vUv); if (t.a < .5) discard; c *= t.rgb; } gl_FragColor = vec4(c, 1.); }`,
+    side: o.side ?? THREE.FrontSide,
   });
 }
 

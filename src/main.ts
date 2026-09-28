@@ -24,6 +24,22 @@ soundBtn.addEventListener('click', () => setSound(!ambientOn()));
 
 // ---------------------------------------------------------------- hero
 const hero = createHero(canvas, stage, await loadWallArt());
+
+// Setting switcher: three concepts for the outdoor desk. The choice lives in
+// the URL (?scene=) so each one can be linked to directly.
+type SceneId = Parameters<typeof hero.setScene>[0];
+const SCENES: SceneId[] = ['clearing', 'meadow', 'lake'];
+const switchBtns = [...document.querySelectorAll<HTMLButtonElement>('.scene-switch [data-scene]')];
+const pickScene = (id: SceneId) => {
+  hero.setScene(id);
+  switchBtns.forEach((b) => b.setAttribute('aria-checked', String(b.dataset.scene === id)));
+  const u = new URL(location.href);
+  u.searchParams.set('scene', id);
+  history.replaceState(null, '', u);
+};
+switchBtns.forEach((b) => b.addEventListener('click', () => pickScene(b.dataset.scene as SceneId)));
+const fromUrl = new URLSearchParams(location.search).get('scene') as SceneId | null;
+pickScene(fromUrl && SCENES.includes(fromUrl) ? fromUrl : 'clearing');
 const ui = setupInteraction(hero, stage, {
   bookshelf: openBooks,
   mpc: openMPC,
@@ -44,7 +60,7 @@ pixelReveal([...document.querySelectorAll<HTMLElement>('main .sec-head, main .bi
 // and the headline breaks up into pixels, as on the Agentic template.
 const heroEl = document.getElementById('top')!;
 const heroCopy = heroEl.querySelector<HTMLElement>('.hero-copy')!;
-const heroBits = heroEl.querySelectorAll<HTMLElement>('.hero-hint, .scroll-cue');
+const heroBits = heroEl.querySelectorAll<HTMLElement>('.hero-hint, .scroll-cue, .scene-switch');
 const onScroll = () => {
   const p = Math.min(1, scrollY / heroEl.offsetHeight);
   hero.view.setScroll(p);
