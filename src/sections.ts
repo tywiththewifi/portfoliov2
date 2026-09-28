@@ -64,6 +64,28 @@ function workVisual(hue: number, k: number) {
   return g.canvas.toDataURL();
 }
 
+// A tileable 64x24 band that fades from dense to empty with ordered (Bayer
+// 8x8) dithering, drawn as 1-bit pixels in the accent colour.
+function ditherBand() {
+  const W = 64, Hh = 24;
+  const g = new Pix(W, Hh);
+  const b8 = (x: number, y: number) => {
+    // recursive Bayer index for an 8x8 matrix
+    let v = 0;
+    for (let bit = 0, m = 4; bit < 3; bit++, m >>= 1) {
+      const xb = (x & m) ? 1 : 0, yb = (y & m) ? 1 : 0;
+      v = v * 4 + ((xb ^ yb) | (yb << 1));
+    }
+    return (v + 0.5) / 64;
+  };
+  const c = accent();
+  for (let y = 0; y < Hh; y++) {
+    const density = 0.6 * (1 - y / Hh) ** 1.6;
+    for (let x = 0; x < W; x++) if (b8(x % 8, y % 8) < density) g.p(x, y, c);
+  }
+  return g.canvas.toDataURL();
+}
+
 // Resolves once the element is on screen.
 function whenVisible(el: Element) {
   return new Promise<void>((res) => {
@@ -129,6 +151,7 @@ export function mountSections() {
   // pixel crosses where the body grid's major lines meet, in the accent
   const cross = `<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' shape-rendering='crispEdges'><path fill='${accent()}' fill-opacity='.28' d='M0 0h1v5H0zM0 115h1v5H0zM1 0h4v1H1zM115 0h5v1h-5z'/></svg>`;
   document.documentElement.style.setProperty('--grid-cross', `url("data:image/svg+xml,${encodeURIComponent(cross)}")`);
+  document.documentElement.style.setProperty('--dither-band', `url(${ditherBand()})`);
 
   // ------------------------------------------------ work: stacked rows
   const workBoard = document.getElementById('workBoard')!;

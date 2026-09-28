@@ -24,7 +24,6 @@ npm run build    # typecheck + production build to dist/
 | `src/art/posters.ts` | Pixel poster homages and flyers for the wall |
 | `src/art/theme.ts` | Reads the accent colour; change it once via `--accent` / `--accent-hi` in `styles.css` |
 | `src/fx/pixelmask.ts` | Pixel-dissolve masks (hero copy on scroll, sections on arrival) |
-| `src/fx/dust.ts` | Site-wide floating dust layer |
 | `src/ui/` | Hover/click, deskOS on the CRT, camera gallery, MPC, bookshelf |
 | `src/audio.ts` | Synthesised ambient + MPC voices (placeholder audio) |
 

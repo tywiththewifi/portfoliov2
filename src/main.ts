@@ -6,7 +6,7 @@ import { setupInteraction } from './ui/interact';
 import { openBooks, openGallery, openMPC } from './ui/panels';
 import { ambientOn, shutter, startAmbient, stopAmbient } from './audio';
 import { mountSections } from './sections';
-import { mountDust } from './fx/dust';
+import { mountBitmaps } from './fx/bitmap';
 import { pixelReveal, setMask } from './fx/pixelmask';
 
 const stage = document.getElementById('stage')!;
@@ -37,8 +37,8 @@ const ui = setupInteraction(hero, stage, {
 });
 
 mountSections();
-mountDust();
-pixelReveal([...document.querySelectorAll<HTMLElement>('main .sec-head, main .work-row, main .peg-kanban, main .about-body, main .contact-body, .foot-row')]);
+mountBitmaps([...document.querySelectorAll<HTMLElement>('[data-bitmap]')]);
+pixelReveal([...document.querySelectorAll<HTMLElement>('main .sec-head, main .bitmap, main .work-row, main .peg-kanban, main .about-body, main .contact-body, .foot-row')]);
 
 // Scrolling out of the hero: the room dissolves upward from the bottom edge
 // and the headline breaks up into pixels, as on the Agentic template.
