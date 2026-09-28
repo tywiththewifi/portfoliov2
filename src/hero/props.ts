@@ -365,7 +365,6 @@ export function buildAudioStack() {
     return m;
   };
   const speakers = [speakerAt(-0.37), speakerAt(0.4)];
-  const speakerTop = new THREE.Vector3(-0.37, DESK_Y + SH + 0.01, WALL_Z + 0.2);
   // speaker wire from each cabinet back to the amp, red/black pairs
   for (const x of [-0.37, 0.4]) {
     for (const [dx, c] of [[0, '#c9483a'], [0.008, '#1a1418']] as const) {
@@ -436,7 +435,7 @@ export function buildAudioStack() {
     cas.rotation.y = (R() - 0.5) * 0.3;
     g.add(cas);
   }
-  return { group: g, meters: [vuL, vuR], tunerGlow, counter, units, speakers, speakerTop };
+  return { group: g, meters: [vuL, vuR], tunerGlow, counter, units, speakers };
 }
 
 // ---------------------------------------------------------------- lamp
@@ -641,8 +640,8 @@ function pothosTex(k: number) {
 // Trailing golden pothos in a small pot, built around its pot base at the
 // origin: vines spill over the front and sides of whatever it sits on
 // (a speaker `drop` metres tall) and a few shoots reach up.
-export function buildPothos(at: THREE.Vector3, opts: { scale?: number; drop?: number; yaw?: number } = {}) {
-  const scale = opts.scale ?? 1, drop = opts.drop ?? 0.25;
+export function buildPothos(at: THREE.Vector3, opts: { scale?: number; drop?: number; front?: number; side?: number; yaw?: number } = {}) {
+  const scale = opts.scale ?? 1, drop = opts.drop ?? 0.4, front = opts.front ?? 0.11, side = opts.side ?? -0.2;
   const root = new THREE.Group();
   const g = new THREE.Group();
   root.add(g);
@@ -658,27 +657,25 @@ export function buildPothos(at: THREE.Vector3, opts: { scale?: number; drop?: nu
   const fwd = v3(0, 0.25, 1).normalize();
   // each vine carries the direction its leaves should face out toward
   const vines: { pts: THREE.Vector3[]; out: THREE.Vector3 }[] = [];
-  // trailing vines spill over the sides and back only, so the speaker's
-  // front stays clear; `side` is -1 (left) or +1 (right)
-  for (let i = 0; i < 7; i++) {
-    const side = i % 2 ? 1 : -1;
-    const zEdge = -0.07 + (i >> 1) * 0.04 + (R() - 0.5) * 0.02; // along the side, back to front-ish
-    const len = drop * (0.4 + R() * 0.7);
-    const x = side * 0.088;
-    const z = Math.min(0.03, zEdge);
+  // trailing vines spill over the shelf's front edge (local z = front) and
+  // hang down the face of it
+  for (let i = 0; i < 6; i++) {
+    const x = -0.17 + i * 0.075 + (R() - 0.5) * 0.03;
+    const len = drop * (0.35 + R() * 0.65);
+    const sway = (R() - 0.5) * 0.06;
     vines.push({
-      out: v3(side, 0, 0.35).normalize(),
-      pts: [v3(side * 0.02, 0.09, z * 0.4), v3(side * 0.055, 0.1, z * 0.8), v3(x, 0.02, z),
-        v3(x + side * 0.01, -len * 0.5, z + (R() - 0.5) * 0.02), v3(x + side * (0.02 + R() * 0.03), -len, z + (R() - 0.5) * 0.03)],
+      out: v3(x * 1.5, 0, 1).normalize(),
+      pts: [v3(x * 0.25, 0.09, 0.02), v3(x * 0.6, 0.08, 0.06), v3(x, 0.012, front + 0.006),
+        v3(x + sway * 0.5, -len * 0.5, front + 0.018), v3(x + sway, -len, front + 0.03)],
     });
   }
-  // two down the back
-  for (const dx of [-0.03, 0.035]) {
-    const len = drop * (0.5 + R() * 0.4);
-    vines.push({ out: v3(Math.sign(dx), 0, -0.4).normalize(), pts: [v3(dx * 0.5, 0.09, -0.02), v3(dx, 0.09, -0.06), v3(dx, 0.02, -0.088), v3(dx * 1.3, -len, -0.095)] });
+  // two over the shelf's side end (local x = side)
+  for (const dz of [-0.03, 0.05]) {
+    const len = drop * (0.5 + R() * 0.45);
+    vines.push({ out: v3(-1, 0, 0.5).normalize(), pts: [v3(-0.03, 0.09, dz * 0.5), v3(side * 0.6, 0.06, dz), v3(side - 0.006, 0.01, dz), v3(side - 0.02, -len * 0.5, dz + 0.01), v3(side - 0.03, -len, dz + 0.02)] });
   }
-  // a long runner down the outer side that wanders off along the desk
-  vines.push({ out: v3(-0.6, 0, 0.8).normalize(), pts: [v3(-0.03, 0.09, 0.0), v3(-0.07, 0.08, 0.0), v3(-0.095, -drop * 0.4, 0.02), v3(-0.11, -drop + 0.01, 0.05), v3(-0.22, -drop + 0.006, 0.12), v3(-0.33, -drop + 0.006, 0.13)] });
+  // a runner that creeps along the top of the shelf, then tips over the edge
+  vines.push({ out: v3(0.3, 0.2, 1).normalize(), pts: [v3(0.03, 0.09, 0.02), v3(0.12, 0.012, 0.05), v3(0.28, 0.006, 0.07), v3(0.4, 0.006, 0.08), v3(0.45, 0.004, front + 0.006), v3(0.46, -drop * 0.45, front + 0.02)] });
   // upright shoots
   for (let i = 0; i < 4; i++) {
     const a = i * 1.7 + R();
@@ -694,7 +691,7 @@ export function buildPothos(at: THREE.Vector3, opts: { scale?: number; drop?: nu
       const u = k / (n + 0.4);
       const p = curve.getPointAt(u), t = curve.getTangentAt(u);
       const alt = new THREE.Vector3().crossVectors(t, out).normalize().multiplyScalar(k % 2 ? 0.45 : -0.45);
-      // leaves hang off the vine, turned away from the speaker
+      // leaves hang off the vine, turned out into the room
       const tip = out.clone().multiplyScalar(0.8).add(alt).addScaledVector(t, 0.35).add(v3(0, -0.2, 0)).normalize();
       // leaf faces the room, kept perpendicular to its tip direction
       const face = fwd.clone().addScaledVector(out, 0.4).addScaledVector(v3(R() - 0.5, R() - 0.5, R() - 0.5), 0.6);

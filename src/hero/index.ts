@@ -42,8 +42,8 @@ export function createHero(canvas: HTMLCanvasElement, stage: HTMLElement, art: W
   S.add(lamp.group);
   const spider = buildSpiderPlant();
   S.add(spider.group);
-  // trailing pothos on the left speaker
-  const pothos = buildPothos(stack.speakerTop, { drop: 0.26, yaw: 0.18 });
+  // trailing pothos on top of the bookshelf, near its left end
+  const pothos = buildPothos(new THREE.Vector3(-1.28, 1.7975, -0.59), { drop: 0.42, front: 0.115, side: -0.21 });
   S.add(pothos.group);
   const camera = buildCamera(H.camera);
   S.add(camera.group);
