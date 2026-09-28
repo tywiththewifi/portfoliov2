@@ -1,10 +1,11 @@
+import { accent, accentHi } from '../art/theme';
+
 // Site-wide floating dust: a fixed, pointer-transparent canvas of pixel
 // motes drifting over the whole page, like the dust in the hero room.
 // Motes parallax against the scroll and scatter away from the cursor.
 
 type Mote = { x: number; y: number; z: number; vx: number; vy: number; ph: number; hue: number };
 
-const COLS = ['#ffd9a8', '#ffa25c', '#ff7a2e', '#fff1dc', '#7fd6cc'];
 const PX = 2; // one art pixel in CSS px
 
 export function mountDust() {
@@ -13,6 +14,8 @@ export function mountDust() {
   cv.setAttribute('aria-hidden', 'true');
   document.body.appendChild(cv);
   const ctx = cv.getContext('2d')!;
+  // warm motes plus the accent, and a rare teal one from the window
+  const COLS = ['#ffd9a8', accentHi(), accent(), '#fff1dc', '#7fd6cc'];
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   let W = 0, H = 0;

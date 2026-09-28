@@ -8,7 +8,7 @@ import { ambientOn, shutter, startAmbient, stopAmbient } from './audio';
 import { mountSections } from './sections';
 import { mountDust } from './fx/dust';
 import { pixelReveal, setMask } from './fx/pixelmask';
-import { mountAscii3D } from './fx/ascii3d';
+import { mountAsciiType } from './fx/asciiType';
 
 const stage = document.getElementById('stage')!;
 const canvas = document.getElementById('heroCanvas') as HTMLCanvasElement;
@@ -39,7 +39,7 @@ const ui = setupInteraction(hero, stage, {
 
 mountSections();
 mountDust();
-void mountAscii3D([...document.querySelectorAll<HTMLElement>('[data-ascii3d]')]);
+mountAsciiType([...document.querySelectorAll<HTMLElement>('pre[data-art]')]);
 pixelReveal([...document.querySelectorAll<HTMLElement>('main .sec-head, main .work-row, main .peg-kanban, main .about-body, main .contact-body, .foot-row')]);
 
 // Scrolling out of the hero: the room dissolves upward from the bottom edge

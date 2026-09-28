@@ -1,8 +1,10 @@
 // 12x12 pixel icons for the pegboard cards (drawn as tiny bitmaps).
 // Each row is 12 chars; '.' = empty, other chars map to palette entries.
 
+import { accent } from './theme';
+
 const PAL: Record<string, string> = {
-  k: '#1a1216', w: '#f6ecd8', o: '#ff7a2e', y: '#f2c14a', r: '#e8483b', b: '#3a6ea5',
+  k: '#1a1216', w: '#f6ecd8', o: '#ff7a2e', // 'o' is swapped for the site accent when drawn y: '#f2c14a', r: '#e8483b', b: '#3a6ea5',
   t: '#3fbfb0', g: '#4f9a4a', p: '#b88ad8', s: '#8a8488', d: '#4a4448', c: '#dccdb6',
 };
 
@@ -71,7 +73,7 @@ export function iconURL(id: IconId, scale = 2) {
   const x = c.getContext('2d')!;
   rows.forEach((row, y) =>
     [...row].forEach((ch, i) => {
-      const col = PAL[ch];
+      const col = ch === 'o' ? accent() : PAL[ch];
       if (!col) return;
       x.fillStyle = col;
       x.fillRect(i * scale, y * scale, scale, scale);

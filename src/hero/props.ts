@@ -339,30 +339,30 @@ export function buildAudioStack() {
   const g = new THREE.Group();
   // a matched pair of desktop speakers either side of the CRT
   const SW = 0.15, SH = 0.25, SD = 0.16;
+  // walnut veneer: even vertical grain, a lit top edge
   const veneer = lit({ map: surf(SD, SH, (p, W, H) => {
-    p.r(0, 0, W, H, '#6a3a26');
-    const R = rng(7);
-    for (let x = 0; x < W; x++) if (R() < 0.35) p.r(x, 0, 1, H, R() < 0.5 ? '#5a3020' : '#7a4630');
-    p.r(0, 0, W, 1, '#8a5a3a');
+    p.r(0, 0, W, H, '#6b3b27');
+    for (let x = 1; x < W; x += 4) for (let y = 0; y < H; y++) p.p(x + (Math.floor(y / 9 + x) % 3 === 0 ? 1 : 0), y, '#613422');
+    p.r(0, 0, W, 1, '#8a5638');
+    p.r(0, H - 1, W, 1, '#4a2618');
   }) });
+  // flat, clean baffle: tweeter, woofer with surround and dust cap, port, LED
   const baffle = lit({ map: surf(SW, SH, (p, W, H) => {
-    p.r(0, 0, W, H, '#1e1a1c');
-    p.r(0, 0, W, 2, '#3a3234');
-    const cx = Math.round(W / 2);
-    p.circle(cx, 15, 8, '#141012');
-    p.sphere(cx, 15, 5, 5, ['#2a2426', '#5a5256', '#a8a0a4', '#e8e0e4']);
-    const wy = 45;
-    p.circle(cx, wy, 20, '#0e0c0d');
-    p.circle(cx, wy, 18, '#2a2426');
-    p.sphere(cx, wy, 16, 16, ['#141012', '#1e1a1c', '#2e282a', '#3e3638', '#4e4648'], 0.3, 0.4);
-    p.sphere(cx, wy, 5, 5, ['#1a1618', '#3a3436', '#6a6266', '#9a9296']);
-    p.r(cx - 10, H - 9, 20, 4, '#070606'); p.r(cx - 10, H - 9, 20, 1, '#2a2426');
-    p.r(W - 8, H - 5, 3, 2, '#62ff7a');
-    p.text('HI-FI', cx - 9, 27, '#8a8286');
-    // corner screws and a thin bevel so the baffle reads as a separate panel
-    for (const [sx, sy] of [[3, 4], [W - 4, 4], [3, H - 4], [W - 4, H - 4]]) { p.p(sx, sy, '#6a6266'); p.p(sx + 1, sy + 1, '#0a0809'); }
-    p.r(0, 0, 1, H, '#2e282a'); p.r(W - 1, 0, 1, H, '#0e0c0d');
-    p.ring(cx, wy, 19, '#3a3436');
+    const cx = Math.floor(W / 2);
+    p.r(0, 0, W, H, '#1c1819');
+    p.r(0, 0, W, 1, '#3a3334'); p.r(0, 0, 1, H, '#2a2425'); p.r(W - 1, 0, 1, H, '#0e0c0d'); p.r(0, H - 1, W, 1, '#0e0c0d');
+    const ty = 13;
+    p.circle(cx, ty, 7, '#0d0b0c'); p.circle(cx, ty, 6, '#1f1b1c'); p.circle(cx, ty, 4, '#383233'); p.circle(cx, ty, 2, '#625b5d');
+    p.p(cx - 1, ty - 1, '#a49d9f');
+    const wy = 41;
+    p.circle(cx, wy, 16, '#0d0b0c'); p.circle(cx, wy, 15, '#2b2627'); p.circle(cx, wy, 13, '#161314');
+    // soft highlight on the upper-left of the cone
+    for (let a = 3.5; a < 4.7; a += 0.04) for (const r of [10, 11]) p.p(Math.round(cx + Math.cos(a) * r), Math.round(wy + Math.sin(a) * r), '#241f20');
+    p.circle(cx, wy, 5, '#2a2526'); p.circle(cx, wy, 4, '#363031');
+    p.p(cx - 2, wy - 2, '#5e5759');
+    p.r(cx - 9, H - 12, 18, 4, '#070606'); p.r(cx - 9, H - 12, 18, 1, '#2b2627');
+    p.r(W - 7, H - 5, 2, 1, '#62ff7a');
+    for (const [sx, sy] of [[3, 3], [W - 4, 3], [3, H - 4], [W - 4, H - 4]]) p.p(sx, sy, '#4a4344');
   }) });
   const speakerAt = (x: number) => {
     const m = box(SW, SH, SD, mats6({ pz: baffle, px: veneer, nx: veneer, py: veneer }, veneer), x, DESK_Y + SH / 2 + 0.01, WALL_Z + 0.2);
@@ -664,28 +664,36 @@ export function buildPothos(at: THREE.Vector3, opts: { scale?: number; drop?: nu
   const R = rng(33);
   const v3 = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
   const fwd = v3(0, 0.25, 1).normalize();
-  const vines: THREE.Vector3[][] = [];
-  // trailing vines: over the front edge and down the face, and down the sides
+  // each vine carries the direction its leaves should face out toward
+  const vines: { pts: THREE.Vector3[]; out: THREE.Vector3 }[] = [];
+  // trailing vines spill over the sides and back only, so the speaker's
+  // front stays clear; `side` is -1 (left) or +1 (right)
   for (let i = 0; i < 7; i++) {
-    const a = -1.3 + (i / 6) * 2.6 + (R() - 0.5) * 0.3; // spread around the front
-    const ox = Math.sin(a) * 0.06, oz = Math.cos(a) * 0.06;
-    const edgeX = Math.sin(a) * 0.085, edgeZ = Math.max(0.03, Math.cos(a) * 0.09);
-    const len = drop * (0.45 + R() * 0.75);
-    const side = Math.abs(a) > 0.9 ? Math.sign(a) : 0;
-    vines.push([
-      v3(ox * 0.6, 0.09, oz * 0.6), v3(ox * 1.2, 0.1, oz * 1.2), v3(edgeX * 1.05, 0.02, edgeZ * 1.05),
-      v3(edgeX * 1.15 + side * 0.012, -len * 0.5, edgeZ * 1.1 + (side ? 0 : 0.012)),
-      v3(edgeX * 1.2 + side * 0.03 + (R() - 0.5) * 0.04, -len, edgeZ * 1.15 + (side ? 0 : 0.02)),
-    ]);
+    const side = i % 2 ? 1 : -1;
+    const zEdge = -0.07 + (i >> 1) * 0.04 + (R() - 0.5) * 0.02; // along the side, back to front-ish
+    const len = drop * (0.4 + R() * 0.7);
+    const x = side * 0.088;
+    const z = Math.min(0.03, zEdge);
+    vines.push({
+      out: v3(side, 0, 0.35).normalize(),
+      pts: [v3(side * 0.02, 0.09, z * 0.4), v3(side * 0.055, 0.1, z * 0.8), v3(x, 0.02, z),
+        v3(x + side * 0.01, -len * 0.5, z + (R() - 0.5) * 0.02), v3(x + side * (0.02 + R() * 0.03), -len, z + (R() - 0.5) * 0.03)],
+    });
   }
-  // one long runner that reaches the desk and wanders off along it
-  vines.push([v3(-0.03, 0.09, 0.02), v3(-0.07, 0.08, 0.05), v3(-0.1, -drop * 0.4, 0.08), v3(-0.13, -drop + 0.01, 0.12), v3(-0.26, -drop + 0.006, 0.16), v3(-0.36, -drop + 0.006, 0.14)]);
+  // two down the back
+  for (const dx of [-0.03, 0.035]) {
+    const len = drop * (0.5 + R() * 0.4);
+    vines.push({ out: v3(Math.sign(dx), 0, -0.4).normalize(), pts: [v3(dx * 0.5, 0.09, -0.02), v3(dx, 0.09, -0.06), v3(dx, 0.02, -0.088), v3(dx * 1.3, -len, -0.095)] });
+  }
+  // a long runner down the outer side that wanders off along the desk
+  vines.push({ out: v3(-0.6, 0, 0.8).normalize(), pts: [v3(-0.03, 0.09, 0.0), v3(-0.07, 0.08, 0.0), v3(-0.095, -drop * 0.4, 0.02), v3(-0.11, -drop + 0.01, 0.05), v3(-0.22, -drop + 0.006, 0.12), v3(-0.33, -drop + 0.006, 0.13)] });
   // upright shoots
   for (let i = 0; i < 4; i++) {
     const a = i * 1.7 + R();
-    vines.push([v3(0, 0.09, 0), v3(Math.sin(a) * 0.03, 0.15, Math.cos(a) * 0.03), v3(Math.sin(a) * 0.07, 0.2 + R() * 0.05, Math.cos(a) * 0.06 + 0.02)]);
+    const o = v3(Math.sin(a), 0, Math.cos(a));
+    vines.push({ out: v3(o.x, 0.4, Math.max(0.2, o.z)).normalize(), pts: [v3(0, 0.09, 0), v3(o.x * 0.03, 0.15, o.z * 0.03), v3(o.x * 0.06, 0.2 + R() * 0.05, o.z * 0.05 - 0.01)] });
   }
-  vines.forEach((pts, vi) => {
+  vines.forEach(({ pts, out }, vi) => {
     const curve = new THREE.CatmullRomCurve3(pts);
     g.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 24, 0.0028, 4), stemMat));
     const L = curve.getLength();
@@ -693,10 +701,14 @@ export function buildPothos(at: THREE.Vector3, opts: { scale?: number; drop?: nu
     for (let k = 1; k <= n; k++) {
       const u = k / (n + 0.4);
       const p = curve.getPointAt(u), t = curve.getTangentAt(u);
-      const sideV = new THREE.Vector3().crossVectors(t, fwd).normalize().multiplyScalar(k % 2 ? 1 : -1);
-      // leaves hang off the vine, turned out toward the room
-      const tip = sideV.multiplyScalar(0.85).addScaledVector(t, 0.45).add(v3(0, -0.25, 0.35)).normalize();
-      const face = fwd.clone().addScaledVector(v3(R() - 0.5, R() - 0.5, 0), 0.9).normalize();
+      const alt = new THREE.Vector3().crossVectors(t, out).normalize().multiplyScalar(k % 2 ? 0.45 : -0.45);
+      // leaves hang off the vine, turned away from the speaker
+      const tip = out.clone().multiplyScalar(0.8).add(alt).addScaledVector(t, 0.35).add(v3(0, -0.2, 0)).normalize();
+      // leaf faces the room, kept perpendicular to its tip direction
+      const face = fwd.clone().addScaledVector(out, 0.4).addScaledVector(v3(R() - 0.5, R() - 0.5, R() - 0.5), 0.6);
+      face.addScaledVector(tip, -face.dot(tip));
+      if (face.lengthSq() < 1e-4) face.set(0, 1, 0);
+      face.normalize();
       const xAxis = new THREE.Vector3().crossVectors(tip, face).normalize();
       const zAxis = new THREE.Vector3().crossVectors(xAxis, tip).normalize();
       const size = (0.034 + R() * 0.02) * (u < 0.3 ? 1.15 : 1 - u * 0.25);
@@ -777,24 +789,6 @@ export function buildCamera(hover: Hover) {
 
 export function buildDeskClutter() {
   const g = new THREE.Group();
-  // notebook: dark cover with an open lined page
-  g.add(box(0.22, 0.016, 0.28, lit({ color: '#2a2a3a' }), 0.34, DESK_Y + 0.008, WALL_Z + 0.62));
-  const page = lit({ map: surf(0.2, 0.26, (p, W, H) => {
-    p.r(0, 0, W, H, '#f0e6d2');
-    for (let y = 10; y < H; y += 6) p.r(3, y, W - 6, 1, '#b8c8e0');
-    p.r(10, 0, 1, H, '#e8a0a0');
-    const R = rng(4);
-    for (let y = 16; y < H - 10; y += 6) p.r(14, y - 2, Math.floor(10 + R() * (W - 30)), 1, '#2a3a78');
-    p.r(W - 30, 30, 20, 12, '#2a3a78'); p.r(W - 29, 31, 18, 10, '#f0e6d2'); p.line(W - 29, 40, W - 12, 32, '#e8483b');
-  }) });
-  const nb = box(0.2, 0.012, 0.26, mats6({ py: page }, lit({ color: '#e8dcc8' })), 0.36, DESK_Y + 0.022, WALL_Z + 0.6);
-  nb.rotation.y = 0.12;
-  g.add(nb);
-  const pencil = box(0.006, 0.006, 0.16, lit({ color: '#f2b73a' }), 0.44, DESK_Y + 0.031, WALL_Z + 0.6);
-  pencil.rotation.y = 0.5;
-  g.add(pencil);
-  // cork coaster under the mug
-  g.add(cyl(0.05, 0.05, 0.004, lit({ map: surf(0.1, 0.1, (p, W, H) => { p.r(0, 0, W, H, '#b88a5a'); p.grain(0.25, 9); }) }), -0.36, DESK_Y + 0.002, WALL_Z + 0.62, 18));
   // a small stack of floppies by the keyboard, labels facing up
   for (let i = 0; i < 3; i++) {
     const c = ['#2a2a32', '#3a6ea5', '#c9483a'][i];
@@ -807,19 +801,6 @@ export function buildDeskClutter() {
     const fl = box(0.09, 0.0035, 0.094, mats6({ py: top }, lit({ color: c })), -0.42 + i * 0.004, DESK_Y + 0.0018 + i * 0.0036, WALL_Z + 0.86 - i * 0.006);
     fl.rotation.y = 0.35 + i * 0.12;
     g.add(fl);
-  }
-  // mug of pens next to the MPC, with a handle
-  const mug = cyl(0.04, 0.038, 0.1, lit({ map: potTex('#e8e0d4', '#ff7a2e') }), -0.36, DESK_Y + 0.05, WALL_Z + 0.62, 18);
-  g.add(mug);
-  const handle = new THREE.Mesh(new THREE.TorusGeometry(0.022, 0.006, 6, 12, Math.PI), lit({ color: '#e8e0d4' }));
-  handle.rotation.z = -Math.PI / 2;
-  handle.position.set(-0.32, DESK_Y + 0.05, WALL_Z + 0.62);
-  g.add(handle);
-  const R = rng(3);
-  for (let i = 0; i < 6; i++) {
-    const pen = box(0.007, 0.16, 0.007, lit({ color: ['#e8483b', '#3a6ea5', '#1a1a1a', '#e8c35a', '#3fa89a', '#ff7a2e'][i] }), -0.36 + (R() - 0.5) * 0.04, DESK_Y + 0.13, WALL_Z + 0.62 + (R() - 0.5) * 0.04);
-    pen.rotation.z = (R() - 0.5) * 0.4;
-    g.add(pen);
   }
   // records leaning at the far left, with sleeve art
   for (let i = 0; i < 4; i++) {

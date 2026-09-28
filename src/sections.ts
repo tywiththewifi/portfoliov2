@@ -2,6 +2,7 @@ import { Pix } from './art/pix';
 import { rng } from './art/posters';
 import { iconURL, type IconId } from './art/icons';
 import { paperize } from './art/paper';
+import { accent } from './art/theme';
 import { projects, services, site } from './content/data';
 
 const hsl = (h: number, s: number, l: number) => `hsl(${h} ${s}% ${l}%)`;
@@ -51,7 +52,7 @@ function workVisual(hue: number, k: number) {
         g.r(x0 + 24 + x, Math.round(y0 + 11 + t * 18 - a), 1, Math.max(1, Math.round(a * 2)), c(t * 35, 70, 62));
       }
     }
-    g.r(x0 + 24 + Math.floor(iw * 0.45), y0, 1, 78, '#ff7a2e');
+    g.r(x0 + 24 + Math.floor(iw * 0.45), y0, 1, 78, accent());
   } else {
     // brand: logo lockup plus a grid of applications
     g.r(x0, y0, iw, 78, c(0, 25, 90));
@@ -125,6 +126,10 @@ async function play(board: HTMLElement, svg: SVGSVGElement, cards: HTMLElement[]
 }
 
 export function mountSections() {
+  // pixel crosses where the body grid's major lines meet, in the accent
+  const cross = `<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' shape-rendering='crispEdges'><path fill='${accent()}' fill-opacity='.28' d='M0 0h1v5H0zM0 115h1v5H0zM1 0h4v1H1zM115 0h5v1h-5z'/></svg>`;
+  document.documentElement.style.setProperty('--grid-cross', `url("data:image/svg+xml,${encodeURIComponent(cross)}")`);
+
   // ------------------------------------------------ work: stacked rows
   const workBoard = document.getElementById('workBoard')!;
   const workList = document.getElementById('workRows')!;

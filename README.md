@@ -22,7 +22,8 @@ npm run build    # typecheck + production build to dist/
 | `src/hero/dust.ts` | Glowing dust motes |
 | `src/art/wall/` | Your personal wall pieces (pixelated PNGs); layout in `WALL` in `room.ts` |
 | `src/art/posters.ts` | Pixel poster homages and flyers for the wall |
-| `src/fx/ascii3d.ts` | ASCII renders of the desk props that type in on scroll |
+| `src/art/ascii/*.txt` | ASCII art pieces (plain text); `src/fx/asciiType.ts` types them in on scroll |
+| `src/art/theme.ts` | Reads the accent colour; change it once via `--accent` / `--accent-hi` in `styles.css` |
 | `src/fx/pixelmask.ts` | Pixel-dissolve masks (hero copy on scroll, sections on arrival) |
 | `src/fx/dust.ts` | Site-wide floating dust layer |
 | `src/ui/` | Hover/click, deskOS on the CRT, camera gallery, MPC, bookshelf |
