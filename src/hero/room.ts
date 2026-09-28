@@ -42,10 +42,10 @@ type Hang = { id: PosterId | keyof WallArt; cx: number; cy: number; w?: number; 
 const WALL: Hang[] = [
   // a curated wall: your picks plus a few homages, in tidy rows with air
   // between them. Left row sits under the shelf; right is a 2-row grid.
-  { id: 'tr909', cx: -1.37, cy: 1.13, w: 0.25 },
-  { id: 'chief', cx: -1.08, cy: 1.13, w: 0.2 },
+  { id: 'tr909', cx: -1.3, cy: 1.13, w: 0.22 },
+  { id: 'chief', cx: -1.04, cy: 1.13, w: 0.2 },
   { id: 'floyd', cx: -0.8, cy: 1.13, w: 0.19 },
-  { id: 'helmets', cx: -1.05, cy: 1.97, w: 0.15 },
+  { id: 'helmets', cx: -1.1, cy: 1.94, w: 0.14 },
   { id: 'bolt', cx: 0.71, cy: 1.44, w: 0.17 },
   { id: 'mixer', cx: 1.0, cy: 1.44, w: 0.19 },
   { id: 'crown', cx: 1.28, cy: 1.44, w: 0.17 },
