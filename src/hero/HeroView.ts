@@ -70,8 +70,8 @@ export class HeroView {
 
   // Camera rig: a resting pose plus a focus pose we can blend into (CRT zoom).
   readonly rig = {
-    pos: new THREE.Vector3(0.0, 1.2, 1.85),
-    look: new THREE.Vector3(0.0, 1.08, -0.7),
+    pos: new THREE.Vector3(0.0, 1.28, 1.85),
+    look: new THREE.Vector3(0.0, 1.2, -0.7),
     fov: 38,
     zoom: 0, // 0 = room, 1 = focused on the CRT
     focusPos: new THREE.Vector3(0.0, 1.03, 0.62),

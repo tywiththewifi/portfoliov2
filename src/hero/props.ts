@@ -6,6 +6,9 @@ import { DESK_Y, WALL_Z } from './room';
 
 export type Hover = { value: number };
 
+// Invisible material for enlarged pointer hit areas.
+const HIT = new THREE.MeshBasicMaterial({ visible: false });
+
 // Texel density for prop surfaces (texels per metre).
 const TD = 300;
 
@@ -356,6 +359,10 @@ export function buildAudioStack() {
     p.r(cx - 10, H - 9, 20, 4, '#070606'); p.r(cx - 10, H - 9, 20, 1, '#2a2426');
     p.r(W - 8, H - 5, 3, 2, '#62ff7a');
     p.text('HI-FI', cx - 9, 27, '#8a8286');
+    // corner screws and a thin bevel so the baffle reads as a separate panel
+    for (const [sx, sy] of [[3, 4], [W - 4, 4], [3, H - 4], [W - 4, H - 4]]) { p.p(sx, sy, '#6a6266'); p.p(sx + 1, sy + 1, '#0a0809'); }
+    p.r(0, 0, 1, H, '#2e282a'); p.r(W - 1, 0, 1, H, '#0e0c0d');
+    p.ring(cx, wy, 19, '#3a3436');
   }) });
   const speakerAt = (x: number) => {
     const m = box(SW, SH, SD, mats6({ pz: baffle, px: veneer, nx: veneer, py: veneer }, veneer), x, DESK_Y + SH / 2 + 0.01, WALL_Z + 0.2);
@@ -366,7 +373,14 @@ export function buildAudioStack() {
     return m;
   };
   const speakers = [speakerAt(-0.37), speakerAt(0.4)];
-  const speakerTop = new THREE.Vector3(0.4, DESK_Y + SH + 0.01, WALL_Z + 0.2);
+  const speakerTop = new THREE.Vector3(-0.37, DESK_Y + SH + 0.01, WALL_Z + 0.2);
+  // speaker wire from each cabinet back to the amp, red/black pairs
+  for (const x of [-0.37, 0.4]) {
+    for (const [dx, c] of [[0, '#c9483a'], [0.008, '#1a1418']] as const) {
+      const pts = [[x + dx, DESK_Y + 0.05, WALL_Z + 0.115], [x + dx + 0.02, DESK_Y + 0.004, WALL_Z + 0.07], [(x + 0.7) / 2, DESK_Y + 0.004, WALL_Z + 0.05], [0.56, DESK_Y + 0.03, WALL_Z + 0.06]];
+      g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map(([a, b, cc]) => new THREE.Vector3(a, b, cc))), 24, 0.0025, 4), lit({ color: c })));
+    }
+  }
 
   const cab = lit({ color: '#2a2226' });
   const stackX = 0.76;
@@ -457,6 +471,8 @@ export function buildLamp(hover: Hover) {
     // coil spring alongside the arm
     for (let i = 0; i < 18; i++) grp.add(box(0.01, 0.004, 0.01, spring, 0.026, len * 0.2 + i * 0.012, 0));
     grp.add(box(0.003, len * 0.25, 0.003, spring, 0.026, len * 0.1, 0));
+    // invisible, fatter grab target: the real arms are only 14mm thick
+    grp.add(box(0.08, len, 0.08, HIT, 0.008, len / 2, 0));
     return grp;
   };
   const lower = new THREE.Group();
@@ -501,7 +517,7 @@ export function buildLamp(hover: Hover) {
   inner.rotation.x = Math.PI / 2;
   inner.position.set(0, -0.165, 0);
   shadeHolder.add(inner);
-  return { group: g, upper, head, shadeHolder, bulb, inner, switchPivot, rocker };
+  return { group: g, base: new THREE.Vector3(baseX, DESK_Y + 0.05, baseZ), lower, upper, head, shadeHolder, bulb, inner, switchPivot, rocker, armL, armU };
 }
 
 // ---------------------------------------------------------------- plants
@@ -591,66 +607,112 @@ export function buildSpiderPlant() {
   return { group: g, mats, center: new THREE.Vector3(potX, potY - 0.2, potZ) };
 }
 
-// Oval leaf with UVs for a veined texture.
-function ovalLeaf(len: number, w: number) {
+// Heart-shaped leaf, base at the origin and tip along +y, with UVs.
+function heartLeaf(len: number, w: number) {
   const s = new THREE.Shape();
-  s.moveTo(0, 0);
-  s.bezierCurveTo(w, len * 0.2, w * 0.9, len * 0.75, 0, len);
-  s.bezierCurveTo(-w * 0.9, len * 0.75, -w, len * 0.2, 0, 0);
-  const geo = new THREE.ShapeGeometry(s, 8);
+  s.moveTo(0, 0.12 * len);
+  s.bezierCurveTo(-w * 0.35, -0.04 * len, -w, 0.08 * len, -w * 0.9, 0.42 * len);
+  s.bezierCurveTo(-w * 0.75, 0.72 * len, -w * 0.2, 0.86 * len, 0, len);
+  s.bezierCurveTo(w * 0.2, 0.86 * len, w * 0.75, 0.72 * len, w * 0.9, 0.42 * len);
+  s.bezierCurveTo(w, 0.08 * len, w * 0.35, -0.04 * len, 0, 0.12 * len);
+  const geo = new THREE.ShapeGeometry(s, 6);
   const pos = geo.attributes.position as THREE.BufferAttribute;
   const uv = geo.attributes.uv as THREE.BufferAttribute;
-  for (let i = 0; i < pos.count; i++) uv.setXY(i, pos.getX(i) / (2 * w) + 0.5, pos.getY(i) / len);
+  for (let i = 0; i < pos.count; i++) {
+    uv.setXY(i, pos.getX(i) / (2 * w) + 0.5, pos.getY(i) / len);
+    // a gentle cup along the midrib so leaves catch the light
+    pos.setZ(i, Math.abs(pos.getX(i)) * 0.35);
+  }
+  geo.computeVertexNormals();
   return geo;
 }
 
-function rubberLeafTex(shade: number) {
-  const g = new Pix(24, 48);
-  const ramp = shade ? ['#163a24', '#1f4a30', '#2a5e3a', '#3a7048'] : ['#123020', '#1a4028', '#245236', '#326442'];
-  g.grad(0, 0, 24, 48, [ramp[3], ramp[2], ramp[1], ramp[0]]);
-  g.r(0, 0, 8, 48, ramp[1]);
-  g.r(11, 0, 2, 48, '#8a3a3a');
-  g.r(12, 0, 1, 48, '#c86a5a');
-  for (let y = 6; y < 44; y += 5) { g.line(12, y, 3, y - 4, ramp[3]); g.line(12, y, 21, y - 4, ramp[0]); }
-  g.dens(14, 4, 6, 30, '#9ac8a0', 0.25);
+// Golden pothos: glossy green with cream-yellow streaks, lighter midrib.
+function pothosTex(k: number) {
+  const g = new Pix(28, 32);
+  const ramps = [['#1e4a22', '#2a6a2c', '#3a8438', '#58a048'], ['#1a4020', '#265e28', '#347834', '#4c9442'], ['#24502a', '#306e30', '#44903c', '#68ac50']];
+  const r = ramps[k % 3];
+  g.grad(0, 0, 28, 32, [r[3], r[2], r[1], r[0]]);
+  g.r(0, 0, 9, 32, r[1]);
+  const R = rng(40 + k);
+  for (let i = 0; i < 7; i++) {
+    const x0 = 14 + (R() < 0.5 ? -1 : 1) * Math.floor(2 + R() * 8), y0 = Math.floor(4 + R() * 22);
+    g.line(14, y0 + 4, x0, y0, R() < 0.5 ? '#e8d878' : '#c8d070');
+    if (R() < 0.5) g.line(14, y0 + 5, x0, y0 + 1, '#b8c060');
+  }
+  g.r(13, 2, 2, 28, '#7ab058');
+  g.r(14, 2, 1, 28, '#c8e088');
+  g.dens(16, 6, 6, 18, '#e8f8c8', 0.18);
   return pixelTexture(g.canvas);
 }
 
-export function buildRubberPlant(at: THREE.Vector3, scale = 1) {
+// Trailing golden pothos in a small pot, built around its pot base at the
+// origin: vines spill over the front and sides of whatever it sits on
+// (a speaker `drop` metres tall) and a few shoots reach up.
+export function buildPothos(at: THREE.Vector3, opts: { scale?: number; drop?: number; yaw?: number } = {}) {
+  const scale = opts.scale ?? 1, drop = opts.drop ?? 0.25;
   const root = new THREE.Group();
   const g = new THREE.Group();
   root.add(g);
-  const x = 0, z = 0;
-  const DESK_Y = 0;
-  g.add(cyl(0.09, 0.07, 0.15, lit({ map: potTex('#d8c0a0', '#e8d4b8') }), x, DESK_Y + 0.075, z, 20));
-  g.add(cyl(0.085, 0.085, 0.01, lit({ color: '#3a2420' }), x, DESK_Y + 0.15, z, 20));
-  const stem = lit({ color: '#5a3a2a' });
-  const s1 = box(0.016, 0.62, 0.016, stem, x, DESK_Y + 0.46, z);
-  s1.rotation.z = 0.06;
-  g.add(s1);
-  const s2 = box(0.012, 0.36, 0.012, stem, x - 0.04, DESK_Y + 0.33, z + 0.02);
-  s2.rotation.z = 0.3;
-  g.add(s2);
-  const leafMats = [0, 1].map((k) => lit({ map: rubberLeafTex(k), side: THREE.DoubleSide, wind: 0.012, windAnchor: at.y + 0.15 * scale, gloss: 0.9 }));
-  const R = rng(21);
-  for (let i = 0; i < 17; i++) {
-    const branch = i > 12;
-    const y = branch ? DESK_Y + 0.36 + (i - 13) * 0.05 : DESK_Y + 0.2 + i * 0.045;
-    const a = i * 2.4 + R() * 0.5;
-    const geo = ovalLeaf(0.19 + R() * 0.07, 0.075 + R() * 0.02);
-    const phase = new Float32Array(geo.attributes.position.count).fill(R() * 6.28);
-    geo.setAttribute('aPhase', new THREE.BufferAttribute(phase, 1));
-    const leaf = new THREE.Mesh(geo, leafMats[i % 2]);
-    leaf.position.set(x + (branch ? -0.1 : 0) + Math.cos(a) * 0.02, y, z + Math.sin(a) * 0.02);
-    leaf.rotation.set(0, a, 0);
-    leaf.rotateX(0.9 + R() * 0.4);
-    g.add(leaf);
+  // glazed pot with a rim and saucer
+  g.add(cyl(0.062, 0.05, 0.085, lit({ map: potTex('#2e5a6a', '#e8dcc8'), gloss: 0.5 }), 0, 0.045, 0, 20));
+  g.add(cyl(0.068, 0.068, 0.014, lit({ color: '#2a5260', gloss: 0.5 }), 0, 0.085, 0, 20));
+  g.add(cyl(0.058, 0.058, 0.008, lit({ color: '#3a2420' }), 0, 0.088, 0, 20));
+  g.add(cyl(0.07, 0.064, 0.008, lit({ color: '#1f3e48' }), 0, 0.004, 0, 20));
+  const mats = [0, 1, 2].map((k) => lit({ map: pothosTex(k), side: THREE.DoubleSide, wind: 0.02, windAnchor: at.y + 0.09 * scale, gloss: 0.8 }));
+  const stemMat = lit({ color: '#6a9a3a', wind: 0.02, windAnchor: at.y + 0.09 * scale });
+  const R = rng(33);
+  const v3 = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
+  const fwd = v3(0, 0.25, 1).normalize();
+  const vines: THREE.Vector3[][] = [];
+  // trailing vines: over the front edge and down the face, and down the sides
+  for (let i = 0; i < 7; i++) {
+    const a = -1.3 + (i / 6) * 2.6 + (R() - 0.5) * 0.3; // spread around the front
+    const ox = Math.sin(a) * 0.06, oz = Math.cos(a) * 0.06;
+    const edgeX = Math.sin(a) * 0.085, edgeZ = Math.max(0.03, Math.cos(a) * 0.09);
+    const len = drop * (0.45 + R() * 0.75);
+    const side = Math.abs(a) > 0.9 ? Math.sign(a) : 0;
+    vines.push([
+      v3(ox * 0.6, 0.09, oz * 0.6), v3(ox * 1.2, 0.1, oz * 1.2), v3(edgeX * 1.05, 0.02, edgeZ * 1.05),
+      v3(edgeX * 1.15 + side * 0.012, -len * 0.5, edgeZ * 1.1 + (side ? 0 : 0.012)),
+      v3(edgeX * 1.2 + side * 0.03 + (R() - 0.5) * 0.04, -len, edgeZ * 1.15 + (side ? 0 : 0.02)),
+    ]);
   }
-  // new leaf sheath at the top
-  g.add(box(0.008, 0.05, 0.008, lit({ color: '#c8584a' }), x + 0.02, DESK_Y + 0.8, z));
+  // one long runner that reaches the desk and wanders off along it
+  vines.push([v3(-0.03, 0.09, 0.02), v3(-0.07, 0.08, 0.05), v3(-0.1, -drop * 0.4, 0.08), v3(-0.13, -drop + 0.01, 0.12), v3(-0.26, -drop + 0.006, 0.16), v3(-0.36, -drop + 0.006, 0.14)]);
+  // upright shoots
+  for (let i = 0; i < 4; i++) {
+    const a = i * 1.7 + R();
+    vines.push([v3(0, 0.09, 0), v3(Math.sin(a) * 0.03, 0.15, Math.cos(a) * 0.03), v3(Math.sin(a) * 0.07, 0.2 + R() * 0.05, Math.cos(a) * 0.06 + 0.02)]);
+  }
+  vines.forEach((pts, vi) => {
+    const curve = new THREE.CatmullRomCurve3(pts);
+    g.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 24, 0.0028, 4), stemMat));
+    const L = curve.getLength();
+    const n = Math.max(3, Math.round(L / 0.045));
+    for (let k = 1; k <= n; k++) {
+      const u = k / (n + 0.4);
+      const p = curve.getPointAt(u), t = curve.getTangentAt(u);
+      const sideV = new THREE.Vector3().crossVectors(t, fwd).normalize().multiplyScalar(k % 2 ? 1 : -1);
+      // leaves hang off the vine, turned out toward the room
+      const tip = sideV.multiplyScalar(0.85).addScaledVector(t, 0.45).add(v3(0, -0.25, 0.35)).normalize();
+      const face = fwd.clone().addScaledVector(v3(R() - 0.5, R() - 0.5, 0), 0.9).normalize();
+      const xAxis = new THREE.Vector3().crossVectors(tip, face).normalize();
+      const zAxis = new THREE.Vector3().crossVectors(xAxis, tip).normalize();
+      const size = (0.034 + R() * 0.02) * (u < 0.3 ? 1.15 : 1 - u * 0.25);
+      const geo = heartLeaf(size * 1.25, size * 0.62);
+      // same phase as the stems so leaves stay on their vines as they sway
+      geo.setAttribute('aPhase', new THREE.BufferAttribute(new Float32Array(geo.attributes.position.count), 1));
+      const leaf = new THREE.Mesh(geo, mats[(vi + k) % 3]);
+      leaf.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(xAxis, tip, zAxis));
+      leaf.position.copy(p);
+      g.add(leaf);
+    }
+  });
   root.position.copy(at);
+  root.rotation.y = opts.yaw ?? 0;
   root.scale.setScalar(scale);
-  return { group: root, mats: leafMats, center: at.clone().add(new THREE.Vector3(0, 0.4 * scale, 0)) };
+  return { group: root, mats: [...mats, stemMat], center: at.clone().add(new THREE.Vector3(0, 0.02 * scale, 0.05)) };
 }
 
 // ---------------------------------------------------------------- camera + small stuff
@@ -731,6 +793,21 @@ export function buildDeskClutter() {
   const pencil = box(0.006, 0.006, 0.16, lit({ color: '#f2b73a' }), 0.44, DESK_Y + 0.031, WALL_Z + 0.6);
   pencil.rotation.y = 0.5;
   g.add(pencil);
+  // cork coaster under the mug
+  g.add(cyl(0.05, 0.05, 0.004, lit({ map: surf(0.1, 0.1, (p, W, H) => { p.r(0, 0, W, H, '#b88a5a'); p.grain(0.25, 9); }) }), -0.36, DESK_Y + 0.002, WALL_Z + 0.62, 18));
+  // a small stack of floppies by the keyboard, labels facing up
+  for (let i = 0; i < 3; i++) {
+    const c = ['#2a2a32', '#3a6ea5', '#c9483a'][i];
+    const top = lit({ map: surf(0.09, 0.094, (p, W, H) => {
+      p.r(0, 0, W, H, c);
+      p.r(6, 0, W - 16, 10, '#b8bcc4'); p.r(W - 22, 2, 6, 7, c);
+      p.r(5, H - 17, W - 10, 15, '#f0e6d2');
+      p.r(8, H - 13, W - 20, 1, '#2a3a78'); p.r(8, H - 9, W - 30, 1, '#2a3a78');
+    }) });
+    const fl = box(0.09, 0.0035, 0.094, mats6({ py: top }, lit({ color: c })), -0.42 + i * 0.004, DESK_Y + 0.0018 + i * 0.0036, WALL_Z + 0.86 - i * 0.006);
+    fl.rotation.y = 0.35 + i * 0.12;
+    g.add(fl);
+  }
   // mug of pens next to the MPC, with a handle
   const mug = cyl(0.04, 0.038, 0.1, lit({ map: potTex('#e8e0d4', '#ff7a2e') }), -0.36, DESK_Y + 0.05, WALL_Z + 0.62, 18);
   g.add(mug);

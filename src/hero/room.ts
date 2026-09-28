@@ -40,21 +40,21 @@ export async function loadWallArt(): Promise<WallArt> {
 // Where each piece hangs: centre on the wall in metres, and printed width.
 type Hang = { id: PosterId | keyof WallArt; cx: number; cy: number; w?: number; tilt?: number };
 const WALL: Hang[] = [
-  // homages first so the personal picks layer on top
-  { id: 'crown', cx: 0.44, cy: 1.42 },
-  { id: 'keys', cx: 1.2, cy: 1.78 },
-  { id: 'helmets', cx: -0.9, cy: 1.16 },
-  { id: 'hero', cx: -1.3, cy: 1.12 },
-  { id: 'rain', cx: -0.62, cy: 1.02 },
-  { id: 'stones', cx: -0.98, cy: 2.04 },
-  { id: 'bolt', cx: -1.45, cy: 2.0 },
-  { id: 'cube', cx: 1.22, cy: 2.0 },
-  // personal picks, kept in the band the default camera sees
-  { id: 'floyd', cx: 0.0, cy: 1.55, w: 0.34 },
-  { id: 'chief', cx: -0.47, cy: 1.2, w: 0.3 },
-  { id: 'tr909', cx: 0.5, cy: 1.74, w: 0.48 },
-  { id: 'mixer', cx: 1.27, cy: 1.4, w: 0.27 },
-  { id: 'mario', cx: 0.95, cy: 1.22, w: 0.3 },
+  // homages: some behind the headline as texture, the rest in the open
+  { id: 'stones', cx: -0.42, cy: 1.72, w: 0.2 },
+  { id: 'keys', cx: 0.08, cy: 1.64, w: 0.2 },
+  { id: 'cube', cx: 0.5, cy: 1.74, w: 0.2 },
+  { id: 'bolt', cx: 0.62, cy: 1.46, w: 0.18 },
+  { id: 'hero', cx: -1.46, cy: 1.98, w: 0.13 },
+  { id: 'helmets', cx: -1.2, cy: 1.99, w: 0.15 },
+  { id: 'rain', cx: 1.01, cy: 1.12, w: 0.17 },
+  { id: 'crown', cx: 1.3, cy: 1.41, w: 0.17 },
+  // personal picks, small and in the clear
+  { id: 'tr909', cx: -1.37, cy: 1.12, w: 0.25 },
+  { id: 'chief', cx: -1.1, cy: 1.14, w: 0.2 },
+  { id: 'floyd', cx: -0.8, cy: 1.13, w: 0.19 },
+  { id: 'mixer', cx: 1.01, cy: 1.39, w: 0.19 },
+  { id: 'mario', cx: 1.28, cy: 1.14, w: 0.2 },
 ];
 
 function collageTexture(wx0: number, wx1: number, wy0: number, wy1: number, art: WallArt) {

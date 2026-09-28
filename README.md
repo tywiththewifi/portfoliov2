@@ -18,7 +18,7 @@ npm run build    # typecheck + production build to dist/
 | `src/hero/HeroView.ts` | Renderer, pixel post-process shader, camera rig and CRT zoom |
 | `src/hero/materials.ts` | Lit/emissive shaders, lamp/window/CRT lights, wind sway |
 | `src/hero/room.ts` | Walls, poster collage, window + teal city, desk, bookshelf |
-| `src/hero/props.ts` | CRT, MPC, turntable, speaker/decks, lamp, plants, camera |
+| `src/hero/props.ts` | CRT, MPC, turntable, speakers + decks, lamp, spider plant, pothos, camera |
 | `src/hero/dust.ts` | Glowing dust motes |
 | `src/art/wall/` | Your personal wall pieces (pixelated PNGs); layout in `WALL` in `room.ts` |
 | `src/art/posters.ts` | Pixel poster homages and flyers for the wall |
@@ -30,4 +30,4 @@ npm run build    # typecheck + production build to dist/
 
 ## Interactions
 
-Hover anything that glows. Computer: zooms into the CRT and opens deskOS. Camera: flash, then a photo roll on the camera's back screen. MPC: playable pads (keys 1-4 / Q-R / A-F / Z-V). Bookshelf: favourite books. Turntable: ambient sound on/off. Lamp: click to switch on/off, drag the head to aim the light. Every object also has a keyboard-focusable button.
+Hover anything that glows. Computer: zooms into the CRT and opens deskOS. Camera: flash, then a photo roll on the camera's back screen. MPC: playable pads (keys 1-4 / Q-R / A-F / Z-V). Bookshelf: favourite books. Turntable: ambient sound on/off. Lamp: click to switch on/off; drag an arm to move the head, drag the shade to aim the light. Every object also has a keyboard-focusable button.

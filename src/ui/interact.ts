@@ -59,33 +59,32 @@ export function setupInteraction(hero: Hero, stage: HTMLElement, actions: Action
     if (e.pointerType === 'mouse') hovered = pick(e.clientX, e.clientY);
   });
   stage.addEventListener('pointerleave', () => { hovered = null; });
-  // Dragging the lamp aims it; everything else is click-to-open.
-  let lampDrag: { x: number; y: number; moved: boolean } | null = null;
+  // Dragging the lamp moves its arm (or swings the shade); a click switches it.
+  let lampDrag: { moved: boolean } | null = null;
   stage.addEventListener('pointerdown', (e) => {
     down = { x: e.clientX, y: e.clientY, t: performance.now() };
     if (!zoomed && !busy && pick(e.clientX, e.clientY) === 'lamp') {
-      lampDrag = { x: e.clientX, y: e.clientY, moved: false };
+      lampDrag = { moved: false };
+      hero.lampGrab(e.clientX, e.clientY);
       stage.setPointerCapture(e.pointerId);
       stage.classList.add('dragging');
       e.preventDefault();
     }
   });
   stage.addEventListener('pointermove', (e) => {
-    if (!lampDrag) return;
-    const r = stage.getBoundingClientRect();
-    const dx = (e.clientX - lampDrag.x) / r.width, dy = (e.clientY - lampDrag.y) / r.height;
-    if (Math.hypot(e.clientX - down!.x, e.clientY - down!.y) > 6) lampDrag.moved = true;
-    hero.aimLamp(dx, dy);
-    lampDrag.x = e.clientX;
-    lampDrag.y = e.clientY;
+    if (!lampDrag || !down) return;
+    if (!lampDrag.moved && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 5) return;
+    lampDrag.moved = true;
+    hero.lampDrag(e.clientX, e.clientY);
   });
   const endDrag = (e: PointerEvent) => {
     if (!lampDrag) return false;
     const moved = lampDrag.moved;
     lampDrag = null;
+    hero.lampRelease();
     stage.classList.remove('dragging');
     if (stage.hasPointerCapture(e.pointerId)) stage.releasePointerCapture(e.pointerId);
-    if (!moved) activate('lamp');
+    if (!moved && e.type === 'pointerup') activate('lamp');
     down = null;
     return true;
   };
@@ -160,7 +159,7 @@ export function setupInteraction(hero: Hero, stage: HTMLElement, actions: Action
   view.onTick(() => {
     const active = zoomed || busy ? null : focused ?? hovered;
     for (const h of hotspots) h.target = h.id === active ? 1 : 0;
-    stage.style.cursor = zoomed ? '' : hovered === 'lamp' ? 'grab' : hovered ? 'pointer' : '';
+    stage.style.cursor = zoomed ? '' : stage.classList.contains('dragging') ? 'grabbing' : hovered === 'lamp' ? 'grab' : hovered ? 'pointer' : '';
 
     if (active) {
       const h = hotspots.find((x) => x.id === active)!;
