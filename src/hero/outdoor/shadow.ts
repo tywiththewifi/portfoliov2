@@ -6,6 +6,10 @@ import { shared } from '../materials';
 // canopy dapple comes from the gobo instead, which reads better in pixels.
 export const CAST = 1;
 
+// Lighter settings for phones and low-core machines: fewer grass blades, a
+// smaller shadow map and a coarser lake reflection.
+export const QUALITY = typeof matchMedia !== 'undefined' && (matchMedia('(max-width: 760px)').matches || (navigator.hardwareConcurrency ?? 8) <= 4) ? 0.5 : 1;
+
 export function castShadows(root: THREE.Object3D) {
   root.traverse((o) => { if ((o as THREE.Mesh).isMesh) o.layers.enable(CAST); });
   return root;

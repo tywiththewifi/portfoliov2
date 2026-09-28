@@ -3,6 +3,7 @@ import { lit, col } from '../materials';
 import { rng } from '../../art/posters';
 import { Pix } from '../../art/pix';
 import { pixelTexture } from '../materials';
+import { QUALITY } from './shadow';
 
 // One grass blade: a tapered, slightly curved strip, 1 unit tall. Normals
 // lean up so a field lights evenly; the shader adds wrap light and a
@@ -40,12 +41,13 @@ export function buildGrass(o: {
 }) {
   const R = rng(o.seed);
   const mat = lit({ grass: true, wind: o.wind ?? 0.09, rootShade: o.rootShade ?? 0.5, side: THREE.DoubleSide });
-  const mesh = new THREE.InstancedMesh(bladeGeometry(), mat, o.count);
+  const count = Math.round(o.count * QUALITY);
+  const mesh = new THREE.InstancedMesh(bladeGeometry(), mat, count);
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3();
   const e = new THREE.Euler();
   const cols = o.colors.map(col);
   let n = 0, tries = 0;
-  while (n < o.count && tries < o.count * 6) {
+  while (n < count && tries < count * 6) {
     tries++;
     const pl = o.sample(R);
     if (!pl) continue;

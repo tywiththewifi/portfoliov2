@@ -3,9 +3,10 @@ import { HeroView } from './HeroView';
 import { col, shared } from './materials';
 import { DESK_Y as DESK_TOP, WALL_Z, type WallArt } from './room';
 import { buildBookcase, buildChair, buildHook, buildTable } from './outdoor/furniture';
-import { SunShadow, castShadows } from './outdoor/shadow';
+import { QUALITY, SunShadow, castShadows } from './outdoor/shadow';
 import { buildClearing } from './scenes/clearing';
 import { buildMeadow } from './scenes/meadow';
+import { buildLake } from './scenes/lake';
 import type { OutdoorScene, SceneBuilder, SceneId } from './scenes/types';
 import {
   buildAudioStack, buildCamera, buildComputer, buildDeskClutter, buildLamp, buildMPC,
@@ -194,9 +195,9 @@ export function createHero(canvas: HTMLCanvasElement, stage: HTMLElement, art: W
   });
 
   // ---------------------------------------------------------------- scenes
-  const BUILDERS: Record<SceneId, SceneBuilder> = { clearing: buildClearing, meadow: buildMeadow, lake: buildClearing };
+  const BUILDERS: Record<SceneId, SceneBuilder> = { clearing: buildClearing, meadow: buildMeadow, lake: buildLake };
   const built = new Map<SceneId, OutdoorScene>();
-  const sun = new SunShadow(2048);
+  const sun = new SunShadow(QUALITY < 1 ? 1024 : 2048);
   let current: OutdoorScene | null = null;
   let lampScale = 1;
   const setScene = (id: SceneId) => {

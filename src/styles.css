@@ -69,6 +69,9 @@ html.os-open .nav { opacity: 0; pointer-events: none; transform: translate(-50%,
 .hero-copy { position: absolute; left: 50%; top: clamp(84px, 11vh, 118px); transform: translateX(-50%); z-index: 5; width: min(1080px, calc(100% - var(--gutter) * 2)); text-align: center; pointer-events: none; transition: opacity .4s; }
 .hero-copy a { pointer-events: auto; }
 html.os-open .hero-scrim { opacity: 0; }
+/* the CRT zoom fills the frame: get the headline and hero chrome out of the way */
+html.os-open .hero-copy, html.os-open .hero-copy a, html.os-open .hero-hint, html.os-open .scene-switch, html.os-open .scroll-cue { opacity: 0; pointer-events: none; }
+.scene-switch { transition: opacity .4s; }
 .hero-sub { margin: 14px auto 0; font-size: clamp(15px, 1.2vw, 18px); line-height: 1.55; color: #e8d6cc; max-width: 60ch; text-shadow: 0 1px 12px rgba(10, 4, 6, .9); }
 .hero-ctas { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
 .hero-ctas .btn { margin-top: 16px; }
