@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { GLSL_COMMON, col } from '../materials';
+import { GLSL_COMMON, col, shared } from '../materials';
 
 // Dithered light shafts: long planes laid along the sun direction that add
 // light through an ordered-dither mask, fading at both ends. They add to
@@ -7,15 +7,16 @@ import { GLSL_COMMON, col } from '../materials';
 export function lightShafts(o: { sunDir: THREE.Vector3; feet: THREE.Vector3[]; len: number; width: number; col: string; strength: number }) {
   const g = new THREE.Group();
   const mat = new THREE.ShaderMaterial({
-    uniforms: { uCol: { value: col(o.col) }, uA: { value: o.strength }, uTime: { value: 0 } },
+    uniforms: { uCol: { value: col(o.col) }, uA: { value: o.strength }, uTime: { value: 0 }, uSmooth: shared.uSmooth },
     vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }',
     fragmentShader: /* glsl */ `
       ${GLSL_COMMON}
-      uniform vec3 uCol; uniform float uA, uTime; varying vec2 vUv;
+      uniform vec3 uCol; uniform float uA, uTime, uSmooth; varying vec2 vUv;
       void main(){
         float across = 1. - abs(vUv.x - .5) * 2.;
         float along = smoothstep(0., .25, vUv.y) * smoothstep(1., .55, vUv.y);
         float a = uA * across * along * (.8 + .2 * sin(uTime * .7 + vUv.y * 6.));
+        if (uSmooth > .5) { gl_FragColor = vec4(uCol * a, 0.); return; }
         if (bayer4(gl_FragCoord.xy) > a) discard;
         gl_FragColor = vec4(uCol, 0.);
       }`,

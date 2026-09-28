@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Reflector } from 'three/examples/jsm/objects/Reflector.js';
-import { GLSL_COMMON } from '../materials';
+import { GLSL_COMMON, shared } from '../materials';
 import { QUALITY } from './shadow';
 
 // A still lake: a planar reflection (three's Reflector) read back with a
@@ -15,6 +15,7 @@ export function buildWater(o: { size: number; y: number; deep: string; res: numb
       tDiffuse: { value: null },
       textureMatrix: { value: null },
       uTime: { value: 0 },
+      uSmooth: { value: 0 },
     },
     vertexShader: /* glsl */ `
       uniform mat4 textureMatrix;
@@ -26,7 +27,7 @@ export function buildWater(o: { size: number; y: number; deep: string; res: numb
       }`,
     fragmentShader: /* glsl */ `
       ${GLSL_COMMON}
-      uniform vec3 color; uniform sampler2D tDiffuse; uniform float uTime;
+      uniform vec3 color; uniform sampler2D tDiffuse; uniform float uTime, uSmooth;
       varying vec4 vUv; varying vec3 vW;
       void main(){
         vec2 w = vW.xz;
@@ -39,7 +40,7 @@ export function buildWater(o: { size: number; y: number; deep: string; res: numb
         vec3 v = normalize(cameraPosition - vW);
         float fres = .35 + .65 * pow(1. - abs(v.y), 3.);
         vec3 c = mix(color, r.rgb, fres);
-        c = floor(c * 24. + bayer4(gl_FragCoord.xy)) / 24.;
+        if (uSmooth < .5) c = floor(c * 24. + bayer4(gl_FragCoord.xy)) / 24.;
         float em = (r.a > .4 && r.a < .9) ? .6 : 1.;
         gl_FragColor = vec4(c, em);
       }`,
@@ -50,5 +51,6 @@ export function buildWater(o: { size: number; y: number; deep: string; res: numb
   water.rotation.x = -Math.PI / 2;
   water.position.y = o.y;
   const mat = water.material as THREE.ShaderMaterial;
+  mat.uniforms.uSmooth = shared.uSmooth; // Reflector clones uniforms; re-link the live one
   return { mesh: water, tick: (t: number) => { mat.uniforms.uTime.value = t; } };
 }

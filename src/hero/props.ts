@@ -327,7 +327,7 @@ export function buildTurntable(hover: Hover) {
 }
 
 // ---------------------------------------------------------------- speaker + stack
-export function buildAudioStack() {
+export function buildAudioStack(o: { speakersOnly?: boolean } = {}) {
   const g = new THREE.Group();
   // a matched pair of desktop speakers either side of the CRT
   const SW = 0.15, SH = 0.25, SD = 0.16;
@@ -365,6 +365,7 @@ export function buildAudioStack() {
     return m;
   };
   const speakers = [speakerAt(-0.37), speakerAt(0.4)];
+  if (o.speakersOnly) return { group: g, speakers };
   // speaker wire from each cabinet back to the amp, red/black pairs
   for (const x of [-0.37, 0.4]) {
     for (const [dx, c] of [[0, '#c9483a'], [0.008, '#1a1418']] as const) {

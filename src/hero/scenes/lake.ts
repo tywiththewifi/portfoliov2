@@ -1,11 +1,10 @@
 import * as THREE from 'three';
 import { flat, lit } from '../materials';
-import { rng, poster } from '../../art/posters';
+import { rng } from '../../art/posters';
 import { buildSky } from '../outdoor/sky';
 import { buildGrass } from '../outdoor/grass';
 import { pine } from '../outdoor/trees';
 import { mountainTex, pineRowTex, plankTex } from '../outdoor/paint';
-import { posterMesh } from '../outdoor/furniture';
 import { buildWater } from '../outdoor/water';
 import { buildAurora } from '../outdoor/aurora';
 import { castShadows } from '../outdoor/shadow';
@@ -15,8 +14,8 @@ import type { OutdoorScene, SceneBuilder } from './types';
 // Night. The desk has been carried to the end of a wooden dock on a still
 // northern lake. Green-to-pink aurora curtains ripple over black pines and
 // snowy ridges and lie mirrored in the water; the only warm light is the
-// lamp and the CRT. Posters are pinned to a notice board on the dock.
-export const buildLake: SceneBuilder = (art) => {
+// lamp and the CRT.
+export const buildLake: SceneBuilder = () => {
   const group = new THREE.Group();
   const R = rng(27);
   const moonDir = new THREE.Vector3(-0.5, 0.26, -0.83).normalize();
@@ -98,36 +97,6 @@ export const buildLake: SceneBuilder = (art) => {
     dock.add(p);
   }
   group.add(castShadows(dock));
-
-  // ---- notice board on the dock with the posters pinned up
-  const board = new THREE.Group();
-  const bw = 1.5, bh = 1.0;
-  board.add(new THREE.Mesh(new THREE.BoxGeometry(bw, bh, 0.04), lit({ color: '#5a4430' })));
-  const cork = new THREE.Mesh(new THREE.PlaneGeometry(bw - 0.1, bh - 0.1), lit({ color: '#8a6a44' }));
-  cork.position.z = 0.021;
-  board.add(cork);
-  for (const x of [-bw / 2 + 0.08, bw / 2 - 0.08]) {
-    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.07, 1.9, 0.07), postMat);
-    leg.position.set(x, -0.45, -0.03);
-    board.add(leg);
-  }
-  const roof = new THREE.Mesh(new THREE.BoxGeometry(bw + 0.2, 0.05, 0.26), postMat);
-  roof.position.set(0, bh / 2 + 0.05, 0.05);
-  roof.rotation.x = 0.25;
-  board.add(roof);
-  const pins: [CanvasImageSource & { width: number; height: number }, number, number, number][] = [
-    [art.floyd, -0.52, 0.12, 0.3], [art.chief, -0.18, 0.16, 0.28], [art.mario, 0.18, 0.14, 0.3], [art.mixer, 0.52, 0.12, 0.28],
-    [art.tr909, -0.3, -0.26, 0.4], [poster('helmets'), 0.28, -0.24, 0.22],
-  ];
-  for (const [src, x, y, w] of pins) {
-    const p = posterMesh(src, w, { tape: false });
-    p.position.set(x, y, 0.03);
-    p.rotation.z = (R() - 0.5) * 0.1;
-    board.add(p);
-  }
-  board.position.set(2.05, 1.4, -1.25);
-  board.rotation.y = -0.35;
-  group.add(castShadows(board));
 
   // ---- reeds around the dock
   group.add(buildGrass({

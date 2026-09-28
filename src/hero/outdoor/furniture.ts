@@ -24,9 +24,10 @@ function rbox(w: number, h: number, d: number, r: number, mat: THREE.Material, x
 // ---------------------------------------------------------------- table
 // The same desk top the props were laid out on, now a freestanding
 // folding table on thin metal legs (like the reference photo).
-export function buildTable(o: { top: string; edge: string; legs: string }) {
+export function buildTable(o: { top: string; edge: string; legs: string; x0?: number; x1?: number }) {
   const g = new THREE.Group();
-  const cx = -0.15, cz = WALL_Z + 0.475, W = 3.4, D = 0.95;
+  const x0 = o.x0 ?? -1.85, x1 = o.x1 ?? 1.55;
+  const cx = (x0 + x1) / 2, cz = WALL_Z + 0.475, W = x1 - x0, D = 0.95;
   const top = lit({ map: (() => {
     const p = new Pix(96, 32);
     p.r(0, 0, 96, 32, o.top);

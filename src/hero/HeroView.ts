@@ -10,7 +10,7 @@ export function pxSize(w: number) {
 const POST_FRAG = /* glsl */ `
   ${GLSL_COMMON}
   uniform sampler2D tColor; uniform sampler2D tDepth; uniform vec2 uRes;
-  uniform float uNear, uFar, uFade, uBloom, uTime, uVignette, uExposure, uFogDen, uFogStart, uOutlineFar;
+  uniform float uNear, uFar, uFade, uBloom, uTime, uVignette, uExposure, uFogDen, uFogStart, uOutlineFar, uSmooth, uGlowR;
   uniform vec3 uBg, uBloomCol, uGrade, uFogCol;
   float isEm(vec4 t){ return (t.a > .4 && t.a < .9) ? 1. : 0.; }
   float dist(vec2 uv){ float d = texture(tDepth, uv).x; return -(uNear * uFar) / ((uFar - uNear) * d - uFar); }
@@ -22,13 +22,13 @@ const POST_FRAG = /* glsl */ `
     float gs = 0.; vec3 gc = vec3(0.);
     for (int i = 0; i < 8; i++) {
       float a = float(i) * .785398; vec2 o = vec2(cos(a), sin(a));
-      vec4 t1 = texture(tColor, uv + o * px * 2.), t2 = texture(tColor, uv + o * px * 5.);
+      vec4 t1 = texture(tColor, uv + o * px * 2. * uGlowR), t2 = texture(tColor, uv + o * px * 5. * uGlowR);
       float w1 = isEm(t1) * smoothstep(.3, .9, dot(t1.rgb, vec3(.33)));
       float w2 = .55 * isEm(t2) * smoothstep(.3, .9, dot(t2.rgb, vec3(.33)));
       gs += w1 + w2; gc += t1.rgb * w1 + t2.rgb * w2;
     }
     vec3 glowCol = gs > 0. ? gc / gs : uBloomCol;
-    float gq = floor(gs * .55 + bayer4(gl_FragCoord.xy)) / 5.;
+    float gq = uSmooth > .5 ? gs * .11 : floor(gs * .55 + bayer4(gl_FragCoord.xy)) / 5.;
     c += mix(uBloomCol, glowCol, .6) * gq * uBloom * (1. - isEm(s0) * .7);
 
     // ink outlines where depth jumps, only on nearby things so a field of
@@ -36,13 +36,13 @@ const POST_FRAG = /* glsl */ `
     float raw = texture(tDepth, uv).x;
     float d = dist(uv);
     float dm = max(max(dist(uv + vec2(px.x, 0.)), dist(uv - vec2(px.x, 0.))), max(dist(uv + vec2(0., px.y)), dist(uv - vec2(0., px.y))));
-    if (d < uOutlineFar && dm - d > max(.06, d * .05)) c *= .55;
+    if (uSmooth < .5 && d < uOutlineFar && dm - d > max(.06, d * .05)) c *= .55;
 
     // aerial perspective: distance haze, stepped with a dither so it bands
     // like the rest of the pixel shading (the sky has no depth and is skipped)
     if (raw < .99999 && uFogDen > 0.) {
       float f = 1. - exp(-max(d - uFogStart, 0.) * uFogDen);
-      f = floor(f * 10. + bayer4(gl_FragCoord.xy)) / 10.;
+      if (uSmooth < .5) f = floor(f * 10. + bayer4(gl_FragCoord.xy)) / 10.;
       c = mix(c, uFogCol, f);
     }
 
@@ -78,6 +78,7 @@ export class HeroView {
   lw = 1;
   lh = 1;
   private scroll = 0;
+  style: 'pixel' | 'poly' = 'pixel';
 
   // Camera rig: a resting pose plus a focus pose we can blend into (CRT zoom).
   readonly rig = {
@@ -121,6 +122,8 @@ export class HeroView {
         uFogDen: { value: 0 },
         uFogStart: { value: 3 },
         uOutlineFar: { value: 1000 },
+        uSmooth: shared.uSmooth,
+        uGlowR: { value: 1 },
         uTime: shared.uTime,
       },
       vertexShader: 'void main(){ gl_Position = vec4(position.xy, 0., 1.); }',
@@ -155,7 +158,8 @@ export class HeroView {
   resize() {
     const w = this.stage.clientWidth || innerWidth;
     const h = this.stage.clientHeight || innerHeight;
-    const P = pxSize(w);
+    // poly: render at full resolution with a little supersampling
+    const P = this.style === 'poly' ? 1 / Math.min(2, (devicePixelRatio || 1) * 1.25) : pxSize(w);
     const lw = Math.ceil(w / P);
     const lh = Math.ceil(h / P);
     if (lw === this.lw && lh === this.lh && P === this.P) return;
@@ -170,6 +174,17 @@ export class HeroView {
     this.applyFade();
     this.camera.aspect = lw / lh;
     this.updateCamera();
+    if (!this.running) this.render();
+  }
+
+  // Pixel art (low-res, dithered) or poly (full-res, smooth-shaded).
+  setStyle(style: 'pixel' | 'poly') {
+    this.style = style;
+    shared.uSmooth.value = style === 'poly' ? 1 : 0;
+    this.canvas.style.imageRendering = style === 'poly' ? 'auto' : '';
+    this.lw = -1; // force a resize
+    this.resize();
+    this.post.uniforms.uGlowR.value = style === 'poly' ? 2 / this.P : 1;
     if (!this.running) this.render();
   }
 

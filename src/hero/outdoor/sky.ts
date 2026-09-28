@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { GLSL_COMMON, col } from '../materials';
+import { GLSL_COMMON, col, shared } from '../materials';
 
 export type SkyOpts = {
   zenith: string;
@@ -34,6 +34,7 @@ export function buildSky(o: SkyOpts) {
       uStars: { value: o.stars ?? 0 },
       uMoon: { value: o.moon ? 1 : 0 },
       uTime: { value: 0 },
+      uSmooth: shared.uSmooth,
     },
     vertexShader: /* glsl */ `
       varying vec3 vDir;
@@ -44,7 +45,7 @@ export function buildSky(o: SkyOpts) {
     fragmentShader: /* glsl */ `
       ${GLSL_COMMON}
       uniform vec3 uZenith, uMid, uHorizon, uBelow, uSunDir, uSunCol, uGlowCol;
-      uniform float uSunSize, uGlow, uStars, uMoon, uTime;
+      uniform float uSunSize, uGlow, uStars, uMoon, uTime, uSmooth;
       varying vec3 vDir;
       void main(){
         vec3 d = normalize(vDir);
@@ -81,7 +82,7 @@ export function buildSky(o: SkyOpts) {
         }
         // posterise the gradient with an ordered dither, like the rest
         float b = bayer4(gl_FragCoord.xy);
-        c = floor(c * 28. + b) / 28.;
+        if (uSmooth < .5) c = floor(c * 28. + b) / 28.;
         gl_FragColor = vec4(c, a);
       }`,
     side: THREE.BackSide,

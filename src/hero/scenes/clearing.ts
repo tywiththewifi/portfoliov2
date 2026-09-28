@@ -1,12 +1,11 @@
 import * as THREE from 'three';
 import { flat, lit } from '../materials';
-import { rng, poster, type PosterId } from '../../art/posters';
+import { rng } from '../../art/posters';
 import { buildSky } from '../outdoor/sky';
 import { buildFlowers, buildGrass } from '../outdoor/grass';
 import { foliage, trunk } from '../outdoor/trees';
 import { barkTex, forestLayerTex, goboTex, groundTex, leafClusterTex, noise2, repeatTex } from '../outdoor/paint';
 import { lightShafts } from '../outdoor/shafts';
-import { posterMesh } from '../outdoor/furniture';
 import { castShadows } from '../outdoor/shadow';
 import type { OutdoorScene, SceneBuilder } from './types';
 
@@ -14,8 +13,8 @@ import type { OutdoorScene, SceneBuilder } from './types';
 // The reference photo, lived in: a desk abandoned to a spring wood. Tall
 // wild grass swallows the table legs, slim mossy trunks crowd in, and the
 // midday sun comes through the canopy in drifting coins of light and a few
-// dusty shafts. Posters are nailed to the nearest trunks.
-export const buildClearing: SceneBuilder = (art) => {
+// dusty shafts.
+export const buildClearing: SceneBuilder = () => {
   const group = new THREE.Group();
   const R = rng(7);
   const sunDir = new THREE.Vector3(-0.35, 0.85, -0.42).normalize();
@@ -121,27 +120,6 @@ export const buildClearing: SceneBuilder = (art) => {
     feet: [new THREE.Vector3(-1.6, 0, -3.2), new THREE.Vector3(0.9, 0, -4.6), new THREE.Vector3(2.8, 0, -3.4), new THREE.Vector3(-4.2, 0, -5.5), new THREE.Vector3(4.6, 0, -6.5)],
   });
   group.add(shafts.group);
-
-  // ---- posters nailed to the feature trunks, turned toward the desk
-  const hang = (src: CanvasImageSource & { width: number; height: number }, w: number, tx: number, tz: number, r: number, y: number, yaw: number) => {
-    const p = posterMesh(src, w);
-    // face the viewer, turned a touch by `yaw` so they don't all look flat-on
-    const dir = new THREE.Vector3(0.25 - tx, 0, 2.7 - tz).normalize().applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw * 0.4);
-    p.position.set(tx + dir.x * (r + 0.01), y, tz + dir.z * (r + 0.01));
-    p.rotation.y = Math.atan2(dir.x, dir.z);
-    p.rotation.z = (R() - 0.5) * 0.08;
-    return castShadows(p);
-  };
-  const [t1, t2, t3] = trunks;
-  group.add(
-    hang(art.floyd, 0.34, t1.x, t1.z, t1.r, 1.4, 0.2),
-    hang(art.chief, 0.34, t1.x, t1.z, t1.r, 0.98, 0.2),
-    hang(art.mario, 0.36, t2.x, t2.z, t2.r, 1.4, -0.2),
-    hang(art.mixer, 0.34, t2.x, t2.z, t2.r, 0.98, -0.2),
-    hang(art.tr909, 0.42, t3.x, t3.z, t3.r, 1.3, 0),
-  );
-  const homage: [PosterId, number, number][] = [['bolt', 4, 1.5], ['crown', 6, 1.4], ['rain', 9, 1.6], ['helmets', 11, 1.45]];
-  for (const [id, i, y] of homage) { const t = trunks[i]; group.add(hang(poster(id), 0.28, t.x, t.z, t.r, y, 0)); }
 
   const gobo = goboTex();
   const scene: OutdoorScene = {

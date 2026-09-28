@@ -1,19 +1,17 @@
 import * as THREE from 'three';
 import { flat, lit } from '../materials';
-import { rng, poster } from '../../art/posters';
+import { rng } from '../../art/posters';
 import { buildSky } from '../outdoor/sky';
 import { buildFlowers, buildGrass } from '../outdoor/grass';
 import { branch, foliage, trunk } from '../outdoor/trees';
 import { barkTex, cloudTex, fbm, groundTex, leafClusterTex, mountainTex, repeatTex } from '../outdoor/paint';
-import { posterMesh } from '../outdoor/furniture';
 import { castShadows } from '../outdoor/shadow';
 import type { OutdoorScene, SceneBuilder } from './types';
 
 // Concept 2 · Golden Hour Meadow
 // The desk on a hilltop at sunset. The land falls away into a hazy valley
-// and layered blue ranges; a lone oak holds one end of a clothesline where
-// the posters hang drying in the breeze; poppies and cornflowers in the
-// grass, and everything casts a long gold shadow.
+// and layered ranges; a lone oak stands nearby, poppies and cornflowers
+// dot the grass, and everything casts a long gold shadow.
 
 // Terrain: a flat crown for the desk, falling away behind, with far hills.
 export function meadowHeight(x: number, z: number) {
@@ -28,7 +26,7 @@ export function meadowHeight(x: number, z: number) {
   return y;
 }
 
-export const buildMeadow: SceneBuilder = (art) => {
+export const buildMeadow: SceneBuilder = () => {
   const group = new THREE.Group();
   const R = rng(17);
   const sunDir = new THREE.Vector3(-0.3, 0.072, -0.95).normalize();
@@ -84,7 +82,7 @@ export const buildMeadow: SceneBuilder = (art) => {
     [new THREE.Vector3(0, 2.8, 0), new THREE.Vector3(-1.2, 3.9, -0.2), new THREE.Vector3(-2.6, 4.4, -0.4)],
     [new THREE.Vector3(0.2, 3.1, 0), new THREE.Vector3(0.6, 4.4, 0.9), new THREE.Vector3(1.1, 5.5, 1.3)],
     [new THREE.Vector3(0.1, 3.0, 0), new THREE.Vector3(-0.3, 4.5, -1), new THREE.Vector3(-0.4, 5.6, -1.6)],
-    [new THREE.Vector3(0.25, 1.7, 0.1), new THREE.Vector3(1.5, 1.95, 0.8), new THREE.Vector3(2.4, 1.9, 1.2)], // low arm for the line
+    [new THREE.Vector3(0.25, 1.7, 0.1), new THREE.Vector3(1.5, 1.95, 0.8), new THREE.Vector3(2.4, 1.9, 1.2)]
   ];
   for (const b of boughs) oak.add(branch(b, 0.13, oakBark));
   oak.add(foliage({
@@ -104,35 +102,6 @@ export const buildMeadow: SceneBuilder = (art) => {
   // (the foliage cards were marked as casters by castShadows; unmark them,
   // the long trunk/bough shadows read better without a solid blob)
   oak.children.forEach((c) => { if ((c as THREE.InstancedMesh).isInstancedMesh) c.layers.disable(1); });
-
-  // ---- clothesline from the oak's low arm to a post, posters pegged on
-  const lineA = new THREE.Vector3(2.4, 1.9, 1.2).applyAxisAngle(new THREE.Vector3(0, 1, 0), 0.3).add(oakAt);
-  const postAt = new THREE.Vector3(3.5, meadowHeight(3.5, -2.3), -2.3);
-  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 1.8, 8), lit({ color: '#6a5036' }));
-  post.position.set(postAt.x, postAt.y + 0.9, postAt.z);
-  group.add(castShadows(post));
-  const lineB = new THREE.Vector3(postAt.x, postAt.y + 1.76, postAt.z);
-  const sag = (t: number) => new THREE.Vector3().lerpVectors(lineA, lineB, t).add(new THREE.Vector3(0, -Math.sin(Math.PI * t) * 0.28, 0));
-  const pts = Array.from({ length: 24 }, (_, i) => sag(i / 23));
-  group.add(castShadows(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 48, 0.006, 4), lit({ color: '#e8dcc0' }))));
-  const hung: { pivot: THREE.Group; phase: number }[] = [];
-  const pieces: [CanvasImageSource & { width: number; height: number }, number, number][] = [
-    [art.floyd, 0.08, 0.34], [art.chief, 0.2, 0.34], [poster('bolt'), 0.31, 0.3],
-    [art.tr909, 0.62, 0.44], [art.mario, 0.75, 0.36], [art.mixer, 0.87, 0.34], [poster('crown'), 0.96, 0.28],
-  ];
-  const peg = lit({ color: '#c8a070' });
-  for (const [src, t, w] of pieces) {
-    const p = posterMesh(src, w, { tape: false });
-    const pivot = new THREE.Group();
-    pivot.position.copy(sag(t));
-    // face the viewer, roughly
-    pivot.rotation.y = Math.atan2(0.25 - pivot.position.x, 2.8 - pivot.position.z) * 0.6;
-    p.position.y = -(p.userData.h as number) / 2 - 0.01;
-    pivot.add(p);
-    for (const px of [-w * 0.35, w * 0.35]) { const pg = new THREE.Mesh(new THREE.BoxGeometry(0.014, 0.05, 0.012), peg); pg.position.set(px, -0.01, 0.006); pivot.add(pg); }
-    group.add(castShadows(pivot));
-    hung.push({ pivot, phase: R() * 6 });
-  }
 
   // ---- golden grass and wildflowers over the crown of the hill
   const onHill = (r: () => number, spread: number, zMin: number, zMax: number) => {
@@ -179,8 +148,6 @@ export const buildMeadow: SceneBuilder = (art) => {
     tick: (t, dt, cam) => {
       sky.tick(t, cam);
       for (const c of clouds) { c.position.x += c.userData.speed * dt; if (c.position.x > 130) c.position.x = -130; }
-      // posters swing on the line in the breeze
-      for (const h of hung) h.pivot.rotation.x = Math.sin(t * 1.3 + h.phase) * 0.07 + Math.sin(t * 0.37 + h.phase) * 0.04;
     },
   };
   return scene;

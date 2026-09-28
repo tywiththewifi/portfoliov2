@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { GLSL_COMMON, col } from '../materials';
+import { GLSL_COMMON, col, shared } from '../materials';
 
 // Aurora curtains: tall, gently curved ribbons far off over the water. The
 // shader folds them with slow travelling waves, streaks them with vertical
@@ -14,6 +14,7 @@ export function buildAurora(o: { bands: { x: number; z: number; w: number; h: nu
       uB: { value: col('#2ee0d0') },
       uC: { value: col('#ff6ea8') },
       uS: { value: o.strength },
+      uSmooth: shared.uSmooth,
     },
     vertexShader: /* glsl */ `
       attribute float aPhase;
@@ -21,7 +22,7 @@ export function buildAurora(o: { bands: { x: number; z: number; w: number; h: nu
       void main(){ vUv = uv; vPhase = aPhase; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }`,
     fragmentShader: /* glsl */ `
       ${GLSL_COMMON}
-      uniform float uTime, uS; uniform vec3 uA, uB, uC;
+      uniform float uTime, uS, uSmooth; uniform vec3 uA, uB, uC;
       varying vec2 vUv; varying float vPhase;
       void main(){
         float x = vUv.x * 6. + vPhase;
@@ -35,8 +36,10 @@ export function buildAurora(o: { bands: { x: number; z: number; w: number; h: nu
         vec3 c = mix(uA, uB, smoothstep(.02, .35, y));
         c = mix(c, uC, smoothstep(.35, .85, y));
         float a = uS * body * rays * ends;
+        vec3 lit = c * (.35 + .65 * (1. - y));
+        if (uSmooth > .5) { gl_FragColor = vec4(lit * min(a, 1.) * .8, 0.); return; }
         if (bayer4(gl_FragCoord.xy) > a) discard;
-        gl_FragColor = vec4(c * (.35 + .65 * (1. - y)), 0.);
+        gl_FragColor = vec4(lit, 0.);
       }`,
     transparent: true,
     depthWrite: false,

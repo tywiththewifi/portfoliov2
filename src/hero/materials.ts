@@ -25,6 +25,8 @@ export const shared = {
   uFillCol: { value: col('#ff7a96') },
   uFillI: { value: 0.4 },
   uLevels: { value: 7 },
+  // 0 = pixel style (posterised, dithered light); 1 = poly style (smooth)
+  uSmooth: { value: 0 },
   // outdoors: sun (with shadow map and a moving canopy "gobo") and sky light
   uSunDir: { value: new THREE.Vector3(0.4, 0.8, 0.3).normalize() },
   uSunCol: { value: col('#fff2d6') },
@@ -87,7 +89,7 @@ const LIT_FRAG = /* glsl */ `
   ${GLSL_COMMON}
   uniform vec3 uColor; uniform sampler2D uMap; uniform float uHasMap;
   uniform vec3 uLampPos, uLampDir, uLampCol, uWinPos, uWinCol, uScrPos, uScrCol, uAmb, uFillPos, uFillCol;
-  uniform float uLampI, uWinI, uScrI, uFillI, uLevels, uTime, uHover, uGloss;
+  uniform float uLampI, uWinI, uScrI, uFillI, uLevels, uTime, uHover, uGloss, uSmooth;
   uniform vec3 uHoverCol;
   uniform vec3 uSunDir, uSunCol, uSkyCol, uGroundCol;
   uniform float uSunI, uHemiI, uShadowOn, uShadowTexel, uGoboOn, uGoboScale, uRootShade;
@@ -154,8 +156,11 @@ const LIT_FRAG = /* glsl */ `
 
     // posterise the light with an ordered dither: the pixel-art shading
     float b = bayer4(gl_FragCoord.xy);
-    light = floor(light * uLevels + b) / uLevels;
-    vec3 c = base * light + uLampCol * floor(spec * 3. + b) / 3.;
+    if (uSmooth < .5) {
+      light = floor(light * uLevels + b) / uLevels;
+      spec = floor(spec * 3. + b) / 3.;
+    }
+    vec3 c = base * light + uLampCol * spec;
 
     // hover: lift and tint toward the highlight colour
     c = mix(c, c * 1.25 + uHoverCol * .18, uHover);

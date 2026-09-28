@@ -3,7 +3,7 @@ import './styles.css';
 import { createHero } from './hero';
 import { loadWallArt } from './hero/room';
 import { setupInteraction } from './ui/interact';
-import { openBooks, openGallery, openMPC } from './ui/panels';
+import { openGallery, openMPC } from './ui/panels';
 import { ambientOn, shutter, startAmbient, stopAmbient } from './audio';
 import { mountSections } from './sections';
 import { mountBitmaps } from './fx/bitmap';
@@ -40,8 +40,20 @@ const pickScene = (id: SceneId) => {
 switchBtns.forEach((b) => b.addEventListener('click', () => pickScene(b.dataset.scene as SceneId)));
 const fromUrl = new URLSearchParams(location.search).get('scene') as SceneId | null;
 pickScene(fromUrl && SCENES.includes(fromUrl) ? fromUrl : 'clearing');
+
+// Render style: pixel art, or the same scene as a full-res poly render (?style=)
+type Style = 'pixel' | 'poly';
+const styleBtns = [...document.querySelectorAll<HTMLButtonElement>('.scene-switch [data-style]')];
+const pickStyle = (s: Style) => {
+  hero.setStyle(s);
+  styleBtns.forEach((b) => b.setAttribute('aria-checked', String(b.dataset.style === s)));
+  const u = new URL(location.href);
+  u.searchParams.set('style', s);
+  history.replaceState(null, '', u);
+};
+styleBtns.forEach((b) => b.addEventListener('click', () => pickStyle(b.dataset.style as Style)));
+pickStyle(new URLSearchParams(location.search).get('style') === 'poly' ? 'poly' : 'pixel');
 const ui = setupInteraction(hero, stage, {
-  bookshelf: openBooks,
   mpc: openMPC,
   camera: () => {
     hero.flash();
@@ -49,7 +61,6 @@ const ui = setupInteraction(hero, stage, {
     setTimeout(openGallery, 380);
   },
   lamp: () => hero.toggleLamp(),
-  turntable: () => setSound(!ambientOn()),
 });
 
 mountSections();

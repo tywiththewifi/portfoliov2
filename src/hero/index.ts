@@ -1,19 +1,16 @@
 import * as THREE from 'three';
 import { HeroView } from './HeroView';
 import { col, shared } from './materials';
-import { DESK_Y as DESK_TOP, WALL_Z, type WallArt } from './room';
-import { buildBookcase, buildChair, buildHook, buildTable } from './outdoor/furniture';
+import { DESK_Y as DESK_TOP, type WallArt } from './room';
+import { buildChair, buildTable } from './outdoor/furniture';
 import { QUALITY, SunShadow, castShadows } from './outdoor/shadow';
 import { buildClearing } from './scenes/clearing';
 import { buildMeadow } from './scenes/meadow';
 import { buildLake } from './scenes/lake';
 import type { OutdoorScene, SceneBuilder, SceneId } from './scenes/types';
-import {
-  buildAudioStack, buildCamera, buildComputer, buildDeskClutter, buildLamp, buildMPC,
-  buildPothos, buildSpiderPlant, buildTurntable, makeScreen,
-} from './props';
+import { buildAudioStack, buildCamera, buildComputer, buildLamp, buildMPC, makeScreen } from './props';
 
-export type HotspotId = 'computer' | 'bookshelf' | 'mpc' | 'camera' | 'lamp' | 'turntable';
+export type HotspotId = 'computer' | 'mpc' | 'camera' | 'lamp';
 
 export type Hotspot = {
   id: HotspotId;
@@ -29,52 +26,36 @@ export function createHero(canvas: HTMLCanvasElement, stage: HTMLElement, art: W
   const view = new HeroView(canvas, stage);
   const S = view.scene;
   const H = {
-    computer: { value: 0 }, shelf: { value: 0 }, mpc: { value: 0 }, camera: { value: 0 }, lamp: { value: 0 }, turntable: { value: 0 },
+    computer: { value: 0 }, mpc: { value: 0 }, camera: { value: 0 }, lamp: { value: 0 },
   };
 
-  // the desk, now a freestanding table outdoors, with the chair from the
-  // photo and a bookcase standing in the grass
-  const table = buildTable({ top: '#cdc6b4', edge: '#a8a090', legs: '#7a7c80' });
+  // a minimal desk: a short folding table with just the computer, speakers,
+  // the MPC, the lamp and the camera on it, and the chair from the photo
+  const table = buildTable({ top: '#cdc6b4', edge: '#a8a090', legs: '#7a7c80', x0: -1.1, x1: 1.47 });
   S.add(castShadows(table));
   const chair = buildChair();
   // pushed back from the desk end, as if someone just stood up
   chair.position.set(1.4, 0, 0.85);
   chair.rotation.y = -2.35;
   S.add(castShadows(chair));
-  const shelf = buildBookcase(H.shelf, new THREE.Vector3(-2.35, 0, WALL_Z + 0.25));
-  shelf.group.rotation.y = 0.35;
-  S.add(castShadows(shelf.group));
 
   const screen = makeScreen();
   const computer = buildComputer(H.computer, screen.tex);
   S.add(computer.group);
   const mpc = buildMPC(H.mpc);
   S.add(mpc.group);
-  const turntable = buildTurntable(H.turntable);
-  S.add(turntable.group);
-  const stack = buildAudioStack();
+  const stack = buildAudioStack({ speakersOnly: true });
   S.add(stack.group);
   const lamp = buildLamp(H.lamp);
   S.add(lamp.group);
-  const spider = buildSpiderPlant();
-  S.add(spider.group);
-  // spider plant hangs from a shepherd's hook planted beside the desk
-  S.add(castShadows(buildHook(new THREE.Vector3(1.78, 0, -0.18), new THREE.Vector3(1.0, 2.55, -0.18))));
-  // trailing pothos on top of the bookcase
-  const pothos = buildPothos(shelf.top.clone().add(new THREE.Vector3(0.12, 0, 0.02)), { scale: 1.1, drop: 0.5, front: 0.14, side: -0.36 });
-  pothos.group.rotation.y = 0.35;
-  S.add(pothos.group);
   const camera = buildCamera(H.camera);
   S.add(camera.group);
-  S.add(buildDeskClutter().group);
-  for (const g of [computer.group, mpc.group, turntable.group, stack.group, lamp.group, camera.group]) castShadows(g);
+  for (const g of [computer.group, mpc.group, stack.group, lamp.group, camera.group]) castShadows(g);
 
   const hotspots: Hotspot[] = [
     { id: 'computer', label: 'Work', hint: 'open projects', hover: H.computer, target: 0, object: computer.group, anchor: () => computer.screenCenter.clone().add(new THREE.Vector3(0, 0.21, 0)) },
-    { id: 'bookshelf', label: 'Bookshelf', hint: 'favourite books', hover: H.shelf, target: 0, object: shelf.group, anchor: () => shelf.top.clone().add(new THREE.Vector3(0, 0.12, 0)) },
     { id: 'mpc', label: 'MPC', hint: 'play the pads', hover: H.mpc, target: 0, object: mpc.group, anchor: () => new THREE.Vector3(-0.72, 0.92, -0.18) },
     { id: 'camera', label: 'Camera', hint: 'photo roll', hover: H.camera, target: 0, object: camera.group, anchor: () => camera.group.position.clone().add(new THREE.Vector3(0, 0.14, 0)) },
-    { id: 'turntable', label: 'Turntable', hint: 'sound on / off', hover: H.turntable, target: 0, object: turntable.group, anchor: () => new THREE.Vector3(-1.22, 0.98, -0.24) },
     { id: 'lamp', label: 'Lamp', hint: 'drag to aim · click to switch', hover: H.lamp, target: 0, object: lamp.group, anchor: () => lamp.bulb.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.16, 0)) },
   ];
 
@@ -112,7 +93,6 @@ export function createHero(canvas: HTMLCanvasElement, stage: HTMLElement, art: W
     return ray.ray.intersectPlane(lampPlane, new THREE.Vector3());
   };
   const soundState = { on: false };
-  let spin = 0;
 
   view.onTick((t, dt) => {
     // idle "you can click me" shimmer, staggered across objects, plus hover easing
@@ -123,7 +103,6 @@ export function createHero(canvas: HTMLCanvasElement, stage: HTMLElement, art: W
 
     // lamp: springs toward the targets (a little overshoot reads as weight);
     // the shade also swings against the head's acceleration like a pendulum
-    const m = view.mouse;
     const h0 = headAt(rig.a[0], rig.a[1]);
     for (let i = 0; i < 3; i++) {
       const k = i === 2 ? 70 : 110, c = i === 2 ? 7 : 13;
@@ -151,29 +130,8 @@ export function createHero(canvas: HTMLCanvasElement, stage: HTMLElement, art: W
     bulbMat.uniforms.uIntensity.value = 0.2 + shared.uLampI.value * 1.1;
     innerMat.uniforms.uIntensity.value = 0.15 + shared.uLampI.value * 0.85;
 
-    // plants: breeze that picks up when the cursor is close
-    const near = (c: THREE.Vector3) => {
-      const s = view.toScreen(c);
-      const mx = ((m.x + 1) / 2) * view.lw * view.P, my = ((m.y + 1) / 2) * view.lh * view.P;
-      return Math.max(0, 1 - Math.hypot(s.x - mx, s.y - my) / 380);
-    };
-    const sp = 0.012 + near(spider.center) * 0.05;
-    spider.mats.forEach((mm) => (mm.uniforms.uWind.value += (sp - mm.uniforms.uWind.value) * Math.min(1, dt * 2)));
-    const rp = 0.008 + near(pothos.center) * 0.035;
-    pothos.mats.forEach((mm) => (mm.uniforms.uWind.value += (rp - mm.uniforms.uWind.value) * Math.min(1, dt * 2)));
-
-    // CRT, record
+    // CRT
     screen.draw(t, H.computer.value, view.rig.zoom > 0.9);
-    spin += ((soundState.on ? 3.5 : 0.25) - spin) * Math.min(1, dt * 2);
-    turntable.platter.rotation.y -= dt * spin;
-
-    // VU meters dance harder with the sound on
-    const lvl = soundState.on ? 1 : 0.35;
-    stack.meters.forEach((m, i) => {
-      const v = 0.3 + lvl * (0.45 + 0.35 * Math.abs(Math.sin(t * (7 + i * 1.3)) * Math.sin(t * 2.1 + i)));
-      (m.material as THREE.ShaderMaterial).uniforms.uIntensity.value = v;
-    });
-    (stack.counter.material as THREE.ShaderMaterial).uniforms.uIntensity.value = Math.floor(t * 2) % 2 ? 0.6 : 0.45;
 
     // MPC pads: chase pattern on hover, slow breathing otherwise
     mpc.pads.forEach((p, i) => {
@@ -187,11 +145,6 @@ export function createHero(canvas: HTMLCanvasElement, stage: HTMLElement, art: W
 
     // camera hop on hover
     camera.group.position.y = 0.76 + Math.max(0, Math.sin(t * 10)) * 0.012 * H.camera.value;
-
-    // books nudge on hover
-    shelf.books.forEach((b, i) => {
-      b.position.y = b.userData.baseY + Math.max(0, Math.sin(t * 4 - i * 0.5)) ** 8 * 0.02 * H.shelf.value;
-    });
   });
 
   // ---------------------------------------------------------------- scenes
@@ -200,6 +153,14 @@ export function createHero(canvas: HTMLCanvasElement, stage: HTMLElement, art: W
   const sun = new SunShadow(QUALITY < 1 ? 1024 : 2048);
   let current: OutdoorScene | null = null;
   let lampScale = 1;
+  // the canopy light pattern is a small texture: crisp texels suit the pixel
+  // style, smooth filtering suits the full-res poly style
+  const goboFilter = () => {
+    const g = shared.uGobo.value;
+    if (!g) return;
+    const f = view.style === 'poly' ? THREE.LinearFilter : THREE.NearestFilter;
+    if (g.magFilter !== f) { g.magFilter = g.minFilter = f; g.needsUpdate = true; }
+  };
   const setScene = (id: SceneId) => {
     if (!built.has(id)) built.set(id, BUILDERS[id](art));
     const sc = built.get(id)!;
@@ -221,7 +182,7 @@ export function createHero(canvas: HTMLCanvasElement, stage: HTMLElement, art: W
     shared.uScrI.value = sc.screenI ?? 0.35;
     lampScale = sc.lampI ?? 1;
     shared.uGoboOn.value = sc.gobo ? 1 : 0;
-    if (sc.gobo) { shared.uGobo.value = sc.gobo.tex; shared.uGoboScale.value = sc.gobo.scale; }
+    if (sc.gobo) { shared.uGobo.value = sc.gobo.tex; shared.uGoboScale.value = sc.gobo.scale; goboFilter(); }
     shared.uShadowOn.value = 1;
     shared.uLevels.value = 8;
     sun.aim(sc.sun.dir, sc.shadow.center, sc.shadow.half);
@@ -253,6 +214,12 @@ export function createHero(canvas: HTMLCanvasElement, stage: HTMLElement, art: W
 
   return {
     setScene,
+    setStyle(style: 'pixel' | 'poly') {
+      view.setStyle(style);
+      stage.dataset.style = style;
+      goboFilter();
+      view.renderOnce();
+    },
     scene: () => current?.id ?? null,
     view, hotspots, computer, camera, lampState, mpc, soundState,
     // Keyboard: nudge the lamp head by (dx, dy) metres.
