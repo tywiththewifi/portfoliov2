@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Pix } from '../art/pix';
-import { flyer, poster, rng, PW, PH, type PosterId } from '../art/posters';
+import { poster, rng, PW, PH, type PosterId } from '../art/posters';
 import { emissive, lit, pixelTexture } from './materials';
 import floydUrl from '../art/wall/floyd.png';
 import tr909Url from '../art/wall/tr909.png';
@@ -40,39 +40,32 @@ export async function loadWallArt(): Promise<WallArt> {
 // Where each piece hangs: centre on the wall in metres, and printed width.
 type Hang = { id: PosterId | keyof WallArt; cx: number; cy: number; w?: number; tilt?: number };
 const WALL: Hang[] = [
-  // homages: some behind the headline as texture, the rest in the open
-  { id: 'stones', cx: -0.42, cy: 1.72, w: 0.2 },
-  { id: 'keys', cx: 0.08, cy: 1.64, w: 0.2 },
-  { id: 'cube', cx: 0.5, cy: 1.74, w: 0.2 },
-  { id: 'bolt', cx: 0.62, cy: 1.46, w: 0.18 },
-  { id: 'hero', cx: -1.46, cy: 1.98, w: 0.13 },
-  { id: 'helmets', cx: -1.2, cy: 1.99, w: 0.15 },
-  { id: 'rain', cx: 1.01, cy: 1.12, w: 0.17 },
-  { id: 'crown', cx: 1.3, cy: 1.41, w: 0.17 },
-  // personal picks, small and in the clear
-  { id: 'tr909', cx: -1.37, cy: 1.12, w: 0.25 },
-  { id: 'chief', cx: -1.1, cy: 1.14, w: 0.2 },
+  // a curated wall: your picks plus a few homages, in tidy rows with air
+  // between them. Left row sits under the shelf; right is a 2-row grid.
+  { id: 'tr909', cx: -1.37, cy: 1.13, w: 0.25 },
+  { id: 'chief', cx: -1.08, cy: 1.13, w: 0.2 },
   { id: 'floyd', cx: -0.8, cy: 1.13, w: 0.19 },
-  { id: 'mixer', cx: 1.01, cy: 1.39, w: 0.19 },
-  { id: 'mario', cx: 1.28, cy: 1.14, w: 0.2 },
+  { id: 'helmets', cx: -1.05, cy: 1.97, w: 0.15 },
+  { id: 'bolt', cx: 0.71, cy: 1.44, w: 0.17 },
+  { id: 'mixer', cx: 1.0, cy: 1.44, w: 0.19 },
+  { id: 'crown', cx: 1.28, cy: 1.44, w: 0.17 },
+  { id: 'rain', cx: 1.0, cy: 1.13, w: 0.17 },
+  { id: 'mario', cx: 1.28, cy: 1.13, w: 0.2 },
 ];
 
 function collageTexture(wx0: number, wx1: number, wy0: number, wy1: number, art: WallArt) {
   const W = Math.round((wx1 - wx0) * PX_PER_M), H = Math.round((wy1 - wy0) * PX_PER_M);
   const g = new Pix(W, H);
   const R = rng(77);
-  g.r(0, 0, W, H, '#b8646a');
-  // layer upon layer of flyers so no bare wall shows through
-  for (let pass = 0; pass < 3; pass++) {
-    for (let y = -16; y < H; y += 36 + Math.floor(R() * 24)) {
-      for (let x = -16; x < W; x += 32 + Math.floor(R() * 32)) {
-        const w = 36 + Math.floor(R() * 44), h = 44 + Math.floor(R() * 48);
-        const f = flyer(Math.floor(R() * 1e9), w, h);
-        g.ctx.drawImage(f, x + Math.floor(R() * 12), y + Math.floor(R() * 12));
-        if (R() < 0.35) g.r(x + 4, y, 9, 4, 'rgba(243,236,216,.85)');
-      }
-    }
+  // painted plaster: a flat rose with faint mottling and a darker ceiling
+  // line, so the pieces on it can breathe
+  g.r(0, 0, W, H, '#ad5f66');
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const v = R();
+    if (v < 0.05) g.p(x, y, '#a3585f');
+    else if (v > 0.97) g.p(x, y, '#b6686e');
   }
+  g.dens(0, 0, W, Math.round(H * 0.18), '#6a2e38', 0.25);
   // feature pieces: drop shadow, paper mat for photos, tape strip, pins
   for (const h of WALL) {
     const personal = h.id in art;
