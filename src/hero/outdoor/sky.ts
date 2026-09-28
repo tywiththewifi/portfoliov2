@@ -59,11 +59,14 @@ export function buildSky(o: SkyOpts) {
         // stars: one hashed cell per ~0.2 degrees, twinkling a little
         if (uStars > 0. && h > .02) {
           // stereographic cells keep stars evenly sized across the dome
-          vec2 cell = floor(d.xz / (1. + d.y) * 260.);
+          vec2 sp = d.xz / (1. + d.y) * 260.;
+          vec2 cell = floor(sp);
           float r = hash12(cell);
-          if (r > 1. - uStars * .02) {
+          // poly style: a small round point inside the cell instead of the whole cell
+          float dotMask = uSmooth > .5 ? 1. - smoothstep(.08, .2, length(fract(sp) - .5)) : 1.;
+          if (r > 1. - uStars * .02 && dotMask > 0.) {
             float tw = .6 + .4 * sin(uTime * (1. + r * 3.) + r * 40.);
-            c += vec3(.9, .95, 1.) * tw * smoothstep(.02, .25, h);
+            c += vec3(.9, .95, 1.) * tw * smoothstep(.02, .25, h) * dotMask;
           }
         }
         // disc
@@ -74,7 +77,7 @@ export function buildSky(o: SkyOpts) {
             vec3 t = normalize(cross(uSunDir, vec3(0., 1., 0.)));
             vec3 b = cross(t, uSunDir);
             vec2 m = vec2(dot(d, t), dot(d, b)) / sqrt(uSunSize * 2.);
-            float crater = step(.7, hash12(floor(m * 6. + 7.)));
+            float crater = uSmooth > .5 ? smoothstep(.55, .9, sin(m.x * 9.) * sin(m.y * 7. + 1.) * .5 + .5) * .6 : step(.7, hash12(floor(m * 6. + 7.)));
             disc *= (.8 + .2 * smoothstep(-.6, .4, m.x)) * (1. - crater * .15);
           }
           c = disc;

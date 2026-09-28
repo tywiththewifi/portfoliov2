@@ -29,7 +29,7 @@ export function meadowHeight(x: number, z: number) {
 export const buildMeadow: SceneBuilder = () => {
   const group = new THREE.Group();
   const R = rng(17);
-  const sunDir = new THREE.Vector3(-0.3, 0.072, -0.95).normalize();
+  const sunDir = new THREE.Vector3(-0.3, 0.13, -0.95).normalize();
 
   const sky = buildSky({ zenith: '#2f5f9c', mid: '#f0a07e', horizon: '#ffd894', below: '#e0a870', sunDir, sunCol: '#fff4cc', sunSize: 0.0016, glow: 1.6, glowCol: '#ffb070' });
   group.add(sky.mesh);

@@ -21,7 +21,7 @@ const POST_FRAG = /* glsl */ `
     // emissive glow: count bright emissive neighbours on two rings, quantised
     float gs = 0.; vec3 gc = vec3(0.);
     for (int i = 0; i < 8; i++) {
-      float a = float(i) * .785398; vec2 o = vec2(cos(a), sin(a));
+      float a = float(i) * .785398 + (uSmooth > .5 ? hash12(gl_FragCoord.xy) * .785398 : 0.); vec2 o = vec2(cos(a), sin(a));
       vec4 t1 = texture(tColor, uv + o * px * 2. * uGlowR), t2 = texture(tColor, uv + o * px * 5. * uGlowR);
       float w1 = isEm(t1) * smoothstep(.3, .9, dot(t1.rgb, vec3(.33)));
       float w2 = .55 * isEm(t2) * smoothstep(.3, .9, dot(t2.rgb, vec3(.33)));

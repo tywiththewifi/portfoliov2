@@ -236,6 +236,7 @@ export function flat(o: { color?: string; map?: THREE.Texture | null; side?: THR
     fragmentShader: `uniform vec3 uColor; uniform sampler2D uMap; uniform float uHasMap; varying vec2 vUv;
       void main(){ vec3 c = uColor; if (uHasMap > .5) { vec4 t = texture2D(uMap, vUv); if (t.a < .5) discard; c *= t.rgb; } gl_FragColor = vec4(c, 1.); }`,
     side: o.side ?? THREE.FrontSide,
+    userData: { backdrop: true },
   });
 }
 

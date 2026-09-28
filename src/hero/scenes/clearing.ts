@@ -96,7 +96,7 @@ export const buildClearing: SceneBuilder = () => {
     sample: (r) => {
       const x = (r() - 0.5) * 16, z = -9 + r() * 9.2;
       if (Math.abs(x + 0.15) < 1.9 && z > -0.75 && z < 0.3) return null;
-      const h = z > 0.45 ? 0.08 + r() * 0.06 : 0.3 + r() * 0.5;
+      const h = z > 0.45 ? 0.08 + r() * 0.06 : z > -1.5 ? 0.14 + r() * 0.14 : 0.3 + r() * 0.5;
       return { x, y: 0, z, h, w: h * 0.4 };
     },
   }));

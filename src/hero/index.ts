@@ -155,6 +155,18 @@ export function createHero(canvas: HTMLCanvasElement, stage: HTMLElement, art: W
   let lampScale = 1;
   // the canopy light pattern is a small texture: crisp texels suit the pixel
   // style, smooth filtering suits the full-res poly style
+  // painted backdrops and leaf/flower cards: smooth-filtered in the poly
+  // style so they read as painted rather than pixelated
+  const cardFilters = () => {
+    const f = view.style === 'poly' ? THREE.LinearFilter : THREE.NearestFilter;
+    S.traverse((o) => {
+      const m = (o as THREE.Mesh).material as THREE.ShaderMaterial | undefined;
+      if (!m || !m.uniforms?.uMap?.value) return;
+      if (!(o as THREE.InstancedMesh).isInstancedMesh && !m.userData.backdrop) return;
+      const t = m.uniforms.uMap.value as THREE.Texture;
+      if (t.magFilter !== f) { t.magFilter = t.minFilter = f; t.needsUpdate = true; }
+    });
+  };
   const goboFilter = () => {
     const g = shared.uGobo.value;
     if (!g) return;
@@ -183,6 +195,7 @@ export function createHero(canvas: HTMLCanvasElement, stage: HTMLElement, art: W
     lampScale = sc.lampI ?? 1;
     shared.uGoboOn.value = sc.gobo ? 1 : 0;
     if (sc.gobo) { shared.uGobo.value = sc.gobo.tex; shared.uGoboScale.value = sc.gobo.scale; goboFilter(); }
+    cardFilters();
     shared.uShadowOn.value = 1;
     shared.uLevels.value = 8;
     sun.aim(sc.sun.dir, sc.shadow.center, sc.shadow.half);
@@ -218,6 +231,7 @@ export function createHero(canvas: HTMLCanvasElement, stage: HTMLElement, art: W
       view.setStyle(style);
       stage.dataset.style = style;
       goboFilter();
+      cardFilters();
       view.renderOnce();
     },
     scene: () => current?.id ?? null,
