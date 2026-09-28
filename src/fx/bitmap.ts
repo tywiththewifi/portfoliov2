@@ -33,14 +33,15 @@ function noise1(x: number, seed: number) {
 // with a dithered halo fading out around it.
 function rings(W: number, H: number): Bits {
   const b = new Uint8Array(W * H);
-  const cx = W / 2, cy = H / 2, R = Math.min(W, H) * 0.46;
+  const cx = W / 2, cy = H / 2, R = Math.min(W, H) * 0.38;
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     const dx = x - cx, dy = y - cy, r = Math.hypot(dx, dy), th = Math.atan2(dy, dx);
     if (r < R) {
       const warp = 3.2 * Math.sin(th * 3 + r * 0.06) * (r / R);
       b[y * W + x] = Math.sin((r + warp) * 0.62) > 0.15 ? 1 : 0;
     } else {
-      const fade = Math.max(0, 1 - (r - R) / (R * 0.5));
+      // halo reaches zero before the canvas edge so it never crops square
+      const fade = Math.max(0, 1 - (r - R) / (Math.min(W, H) / 2 - R));
       b[y * W + x] = bayer8(x & 7, y & 7) < fade * 0.35 ? 1 : 0;
     }
   }
