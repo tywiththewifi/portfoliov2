@@ -43,7 +43,7 @@ export function createHero(canvas: HTMLCanvasElement, stage: HTMLElement, art: W
   const spider = buildSpiderPlant();
   S.add(spider.group);
   // trailing pothos on top of the bookshelf, near its left end
-  const pothos = buildPothos(new THREE.Vector3(-1.28, 1.7975, -0.59), { drop: 0.42, front: 0.115, side: -0.21 });
+  const pothos = buildPothos(new THREE.Vector3(-1.3, 1.7075, -0.59), { scale: 1.2, drop: 0.36, front: 0.096, side: -0.165 });
   S.add(pothos.group);
   const camera = buildCamera(H.camera);
   S.add(camera.group);
@@ -51,7 +51,7 @@ export function createHero(canvas: HTMLCanvasElement, stage: HTMLElement, art: W
 
   const hotspots: Hotspot[] = [
     { id: 'computer', label: 'Work', hint: 'open projects', hover: H.computer, target: 0, object: computer.group, anchor: () => computer.screenCenter.clone().add(new THREE.Vector3(0, 0.21, 0)) },
-    { id: 'bookshelf', label: 'Bookshelf', hint: 'favourite books', hover: H.shelf, target: 0, object: room.shelf, anchor: () => new THREE.Vector3(-0.93, 1.86, -0.6) },
+    { id: 'bookshelf', label: 'Bookshelf', hint: 'favourite books', hover: H.shelf, target: 0, object: room.shelf, anchor: () => new THREE.Vector3(-0.93, 1.77, -0.6) },
     { id: 'mpc', label: 'MPC', hint: 'play the pads', hover: H.mpc, target: 0, object: mpc.group, anchor: () => new THREE.Vector3(-0.72, 0.92, -0.18) },
     { id: 'camera', label: 'Camera', hint: 'photo roll', hover: H.camera, target: 0, object: camera.group, anchor: () => camera.group.position.clone().add(new THREE.Vector3(0, 0.14, 0)) },
     { id: 'turntable', label: 'Turntable', hint: 'sound on / off', hover: H.turntable, target: 0, object: turntable.group, anchor: () => new THREE.Vector3(-1.22, 0.98, -0.24) },
