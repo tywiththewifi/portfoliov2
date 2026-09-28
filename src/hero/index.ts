@@ -8,9 +8,12 @@ import { buildClearing } from './scenes/clearing';
 import { buildMeadow } from './scenes/meadow';
 import { buildLake } from './scenes/lake';
 import type { OutdoorScene, SceneBuilder, SceneId } from './scenes/types';
-import { buildAudioStack, buildCamera, buildComputer, buildLamp, buildMPC, makeScreen } from './props';
+import { makeScreen } from './props';
+import { contactShadow } from './desk/decals';
+import { buildKeyboard, buildMonitor, buildMouse, buildTower, deskCable } from './desk/computer';
+import { buildCamera, buildLamp, buildSpeakers } from './desk/gear';
 
-export type HotspotId = 'computer' | 'mpc' | 'camera' | 'lamp';
+export type HotspotId = 'computer' | 'camera' | 'lamp';
 
 export type Hotspot = {
   id: HotspotId;
@@ -26,35 +29,64 @@ export function createHero(canvas: HTMLCanvasElement, stage: HTMLElement, art: W
   const view = new HeroView(canvas, stage);
   const S = view.scene;
   const H = {
-    computer: { value: 0 }, mpc: { value: 0 }, camera: { value: 0 }, lamp: { value: 0 },
+    computer: { value: 0 }, camera: { value: 0 }, lamp: { value: 0 },
   };
 
-  // a minimal desk: a short folding table with just the computer, speakers,
-  // the MPC, the lamp and the camera on it, and the chair from the photo
-  const table = buildTable({ top: '#cdc6b4', edge: '#a8a090', legs: '#7a7c80', x0: -1.1, x1: 1.47 });
+  // a small folding table with a beige CRT and its tower, a pair of
+  // speakers, the lamp and a camera on it, and the chair from the photo.
+  // The table runs x -0.78..0.78 and back to front z -0.7..0.06.
+  const table = buildTable({ top: '#cdc6b4', edge: '#a8a090', legs: '#7a7c80', x0: -0.78, x1: 0.78, depth: 0.76 });
   S.add(castShadows(table));
   const chair = buildChair();
   // pushed back from the desk end, as if someone just stood up
-  chair.position.set(1.4, 0, 0.85);
-  chair.rotation.y = -2.35;
+  chair.position.set(1.06, 0, -0.22);
+  chair.rotation.y = -1.8;
+  chair.scale.setScalar(0.9);
   S.add(castShadows(chair));
 
   const screen = makeScreen();
-  const computer = buildComputer(H.computer, screen.tex);
-  S.add(computer.group);
-  const mpc = buildMPC(H.mpc);
-  S.add(mpc.group);
-  const stack = buildAudioStack({ speakersOnly: true });
+  const computer = buildMonitor(H.computer, screen.tex, new THREE.Vector3(0, DESK_TOP, -0.18));
+  const tower = buildTower(H.computer, new THREE.Vector3(-0.585, DESK_TOP, -0.4), 0.1);
+  const keyboard = buildKeyboard(H.computer, new THREE.Vector3(-0.02, DESK_TOP, -0.058), 0.015);
+  const mouse = buildMouse(H.computer, new THREE.Vector3(0.3, DESK_TOP, -0.045), Math.PI - 0.12);
+  const cables = new THREE.Group();
+  cables.add(deskCable(keyboard.cablePort, tower.back.clone().setY(DESK_TOP + 0.02), { coil: 26, r: 0.0022, lift: 0.01, wander: 0.03, hover: H.computer }));
+  cables.add(deskCable(mouse.tail, tower.back.clone().add(new THREE.Vector3(0.02, -0.02, 0)), { r: 0.0024, lift: 0.02, wander: 0.05, hover: H.computer }));
+  cables.add(deskCable(computer.back, tower.back.clone().add(new THREE.Vector3(0, 0.03, 0)), { color: '#2a2622', r: 0.004, lift: 0.1, wander: 0.02, hover: H.computer }));
+  const computerGroup = new THREE.Group();
+  computerGroup.add(computer.group, tower.group, keyboard.group, mouse.group, cables);
+  S.add(computerGroup);
+  const stack = buildSpeakers([[-0.33, DESK_TOP, -0.41], [0.33, DESK_TOP, -0.41]], new THREE.Vector3(0, 0, 0.9));
   S.add(stack.group);
-  const lamp = buildLamp(H.lamp);
+  const lamp = buildLamp(H.lamp, new THREE.Vector3(0.62, DESK_TOP, -0.5));
   S.add(lamp.group);
-  const camera = buildCamera(H.camera);
+  const camera = buildCamera(H.camera, new THREE.Vector3(0.56, DESK_TOP, -0.03), -0.42);
   S.add(camera.group);
-  for (const g of [computer.group, mpc.group, stack.group, lamp.group, camera.group]) castShadows(g);
+  for (const g of [computerGroup, stack.group, lamp.group, camera.group]) castShadows(g);
+  // soft contact shadows where things meet the table top (added after the
+  // shadow-caster pass so they don't cast themselves)
+  const contact = new THREE.Group();
+  const cs = (x: number, z: number, w: number, d: number, ry = 0, o: Parameters<typeof contactShadow>[2] = {}) => {
+    const m = contactShadow(w, d, o);
+    m.position.set(x, DESK_TOP + 0.0008, z);
+    m.rotation.z = ry;
+    contact.add(m);
+  };
+  cs(0, -0.37, 0.25, 0.25, 0, { round: true, strength: 0.55, spread: 0.03 });
+  cs(-0.585, -0.4, 0.19, 0.42, 0.1, { strength: 0.6 });
+  cs(-0.02, -0.058, 0.46, 0.17, 0.015, { strength: 0.45, spread: 0.02 });
+  for (const s of stack.speakers) cs(s.position.x, s.position.z, 0.13, 0.16, s.rotation.y, { strength: 0.55 });
+  cs(lamp.base.x, lamp.base.z, 0.17, 0.17, 0, { round: true, strength: 0.5 });
+  cs(0.56, -0.03, 0.12, 0.04, -0.42, { strength: 0.5, spread: 0.018 });
+  cs(0.3, -0.045, 0.06, 0.1, -0.12, { strength: 0.45, spread: 0.015 });
+  S.add(contact);
+  // the CRT zoom frames the tube wherever it sits
+  const sc = computer.screenCenter;
+  view.rig.focusPos.set(sc.x, sc.y - 0.045, sc.z + 0.83);
+  view.rig.focusLook.set(sc.x, sc.y - 0.045, sc.z - 0.09);
 
   const hotspots: Hotspot[] = [
-    { id: 'computer', label: 'Work', hint: 'open projects', hover: H.computer, target: 0, object: computer.group, anchor: () => computer.screenCenter.clone().add(new THREE.Vector3(0, 0.21, 0)) },
-    { id: 'mpc', label: 'MPC', hint: 'play the pads', hover: H.mpc, target: 0, object: mpc.group, anchor: () => new THREE.Vector3(-0.72, 0.92, -0.18) },
+    { id: 'computer', label: 'Work', hint: 'open projects', hover: H.computer, target: 0, object: computerGroup, anchor: () => computer.screenCenter.clone().add(new THREE.Vector3(0, 0.21, 0)) },
     { id: 'camera', label: 'Camera', hint: 'photo roll', hover: H.camera, target: 0, object: camera.group, anchor: () => camera.group.position.clone().add(new THREE.Vector3(0, 0.14, 0)) },
     { id: 'lamp', label: 'Lamp', hint: 'drag to aim · click to switch', hover: H.lamp, target: 0, object: lamp.group, anchor: () => lamp.bulb.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.16, 0)) },
   ];
@@ -65,7 +97,7 @@ export function createHero(canvas: HTMLCanvasElement, stage: HTMLElement, art: W
   // head with two-bone IK; dragging the shade swings it to point at you.
   const lampState = { on: true, flicker: 0 };
   const rig = {
-    a: [0.35, 1.25, -0.38], v: [0, 0, 0], g: [0.35, 1.25, -0.38],
+    a: [0.35, 1.25, -0.4], v: [0, 0, 0], g: [0.35, 1.25, -0.4],
     grab: new THREE.Vector2(), headV: new THREE.Vector2(), mode: '' as '' | 'arm' | 'shade',
   };
   const lampPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -lamp.base.z);
@@ -93,6 +125,9 @@ export function createHero(canvas: HTMLCanvasElement, stage: HTMLElement, art: W
     return ray.ray.intersectPlane(lampPlane, new THREE.Vector3());
   };
   const soundState = { on: false };
+  // rest pose: the head reaching in over the right speaker toward the CRT
+  solve(0.3, 1.37);
+  rig.a[0] = rig.g[0]; rig.a[1] = rig.g[1];
 
   view.onTick((t, dt) => {
     // idle "you can click me" shimmer, staggered across objects, plus hover easing
@@ -133,11 +168,9 @@ export function createHero(canvas: HTMLCanvasElement, stage: HTMLElement, art: W
     // CRT
     screen.draw(t, H.computer.value, view.rig.zoom > 0.9);
 
-    // MPC pads: chase pattern on hover, slow breathing otherwise
-    mpc.pads.forEach((p, i) => {
-      const chase = Math.max(0, Math.sin(t * 9 - i * 0.7)) ** 6;
-      p.mat.uniforms.uIntensity.value = 0.28 + H.mpc.value * chase * 1.1 + (i === Math.floor(t * 1.5) % 16 ? 0.3 : 0);
-    });
+    // the tower's disk light: bursts of access, busier while hovered
+    const busy = Math.sin(t * 0.7) * Math.sin(t * 1.9 + 1) > 0.25 || H.computer.value > 0.5;
+    tower.hddLed.uniforms.uIntensity.value = busy && Math.random() < 0.55 ? 1.3 : 0.12;
 
     // flash exposure decays back to normal
     const ex = view.post.uniforms.uExposure;
@@ -230,12 +263,16 @@ export function createHero(canvas: HTMLCanvasElement, stage: HTMLElement, art: W
     setStyle(style: 'pixel' | 'poly') {
       view.setStyle(style);
       stage.dataset.style = style;
+      // the CRT's phosphor reads softer, like a real tube, in the poly render
+      const f = style === 'poly' ? THREE.LinearFilter : THREE.NearestFilter;
+      screen.tex.magFilter = screen.tex.minFilter = f;
+      screen.tex.needsUpdate = true;
       goboFilter();
       cardFilters();
       view.renderOnce();
     },
     scene: () => current?.id ?? null,
-    view, hotspots, computer, camera, lampState, mpc, soundState,
+    view, hotspots, computer, camera, lampState, soundState,
     // Keyboard: nudge the lamp head by (dx, dy) metres.
     aimLamp(dx: number, dy: number) {
       const h = headAt(rig.g[0], rig.g[1]);

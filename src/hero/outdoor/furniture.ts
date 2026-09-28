@@ -1,8 +1,7 @@
 import * as THREE from 'three';
-import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { lit, pixelTexture } from '../materials';
+import { Kit, box as kbox, cyl as kcyl, lathe, rbox as krbox, tube } from '../desk/kit';
 import { DESK_Y, WALL_Z, spineTex, woodTex } from '../room';
-import { Pix } from '../../art/pix';
 import { rng } from '../../art/posters';
 
 function box(w: number, h: number, d: number, mat: THREE.Material | THREE.Material[], x = 0, y = 0, z = 0) {
@@ -10,88 +9,134 @@ function box(w: number, h: number, d: number, mat: THREE.Material | THREE.Materi
   m.position.set(x, y, z);
   return m;
 }
-function cyl(r: number, h: number, mat: THREE.Material, x = 0, y = 0, z = 0, seg = 12) {
-  const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, seg), mat);
-  m.position.set(x, y, z);
-  return m;
-}
-function rbox(w: number, h: number, d: number, r: number, mat: THREE.Material, x = 0, y = 0, z = 0) {
-  const m = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 3, r), mat);
-  m.position.set(x, y, z);
-  return m;
-}
-
 // ---------------------------------------------------------------- table
-// The same desk top the props were laid out on, now a freestanding
-// folding table on thin metal legs (like the reference photo).
-export function buildTable(o: { top: string; edge: string; legs: string; x0?: number; x1?: number }) {
+// A compact folding table, as in the reference photo: a laminate top on a
+// thicker moulded edge, steel aprons and a centre rail underneath, and
+// round tube legs with hinge brackets, fold-out braces, a stretcher per
+// leg pair and rubber feet. Spans x0..x1 against the back line at WALL_Z.
+export function buildTable(o: { top: string; edge: string; legs: string; x0?: number; x1?: number; depth?: number }) {
   const g = new THREE.Group();
-  const x0 = o.x0 ?? -1.85, x1 = o.x1 ?? 1.55;
-  const cx = (x0 + x1) / 2, cz = WALL_Z + 0.475, W = x1 - x0, D = 0.95;
-  const top = lit({ map: (() => {
-    const p = new Pix(96, 32);
-    p.r(0, 0, 96, 32, o.top);
-    const R = rng(4);
-    for (let i = 0; i < 90; i++) p.p(Math.floor(R() * 96), Math.floor(R() * 32), o.edge); // scuffs
-    for (let i = 0; i < 3; i++) p.ellipse(10 + Math.floor(R() * 76), 6 + Math.floor(R() * 20), 3, 1, o.edge); // cup rings
-    return pixelTexture(p.canvas);
-  })() });
-  g.add(box(W, 0.045, D, [lit({ color: o.edge }), lit({ color: o.edge }), top, lit({ color: o.edge }), lit({ color: o.edge }), lit({ color: o.edge })], cx, DESK_Y - 0.0225, cz));
-  const leg = lit({ color: o.legs, gloss: 0.5 });
-  const lh = DESK_Y - 0.045;
-  for (const x of [cx - W / 2 + 0.06, cx + W / 2 - 0.06]) for (const z of [cz - D / 2 + 0.06, cz + D / 2 - 0.06]) g.add(box(0.035, lh, 0.035, leg, x, lh / 2, z));
-  // aprons and a cross brace under the top
-  g.add(box(W - 0.1, 0.05, 0.02, leg, cx, DESK_Y - 0.07, cz + D / 2 - 0.06));
-  g.add(box(W - 0.1, 0.05, 0.02, leg, cx, DESK_Y - 0.07, cz - D / 2 + 0.06));
-  g.add(box(W - 0.1, 0.025, 0.025, leg, cx, 0.18, cz - D / 2 + 0.06));
+  const x0 = o.x0 ?? -0.78, x1 = o.x1 ?? 0.78, D = o.depth ?? 0.76;
+  const cx = (x0 + x1) / 2, cz = WALL_Z + D / 2, W = x1 - x0;
+  const k = new Kit({
+    top: lit({ color: o.top, vcol: true, rough: 0.46, grain: 0.05, grainScale: [90, 90, 90] }),
+    edge: lit({ color: o.edge, vcol: true, rough: 0.55, grain: 0.04, grainScale: [300, 300, 300] }),
+    steel: lit({ color: o.legs, vcol: true, rough: 0.34, metal: 0.8, grain: 0.06, grainScale: [400, 400, 400] }),
+    rubber: lit({ color: '#1c1b1a', vcol: true, rough: 0.9 }),
+    stain: lit({ color: o.edge, vcol: true, rough: 0.5 }),
+  }, 3);
+  // top: a thin laminate sheet on a thicker moulded core with a soft edge
+  k.add('edge', krbox(W, 0.034, D, 0.012, 3), { x: cx, y: DESK_Y - 0.017, z: cz });
+  k.add('top', krbox(W - 0.014, 0.004, D - 0.014, 0.0018, 1), { x: cx, y: DESK_Y - 0.0015, z: cz, wear: 0 });
+  // a faded coffee ring on the laminate
+  k.add('stain', new THREE.RingGeometry(0.033, 0.037, 40), { x: cx + W * 0.36, y: DESK_Y + 0.0006, z: cz + 0.16, rx: -Math.PI / 2, tint: 1.06, jitter: 0 });
+  k.add('stain', new THREE.RingGeometry(0.031, 0.033, 40, 1, 0.4, 4.2), { x: cx + W * 0.36 + 0.012, y: DESK_Y + 0.0006, z: cz + 0.152, rx: -Math.PI / 2, tint: 1.08, jitter: 0 });
+  // under-frame: C-channel aprons all round and a centre rail
+  const uy = DESK_Y - 0.034 - 0.02;
+  for (const s of [-1, 1]) {
+    k.add('steel', kbox(W - 0.12, 0.04, 0.003), { x: cx, y: uy, z: cz + s * (D / 2 - 0.06) });
+    k.add('steel', kbox(W - 0.12, 0.003, 0.018), { x: cx, y: uy - 0.0185, z: cz + s * (D / 2 - 0.069) });
+    k.add('steel', kbox(0.003, 0.04, D - 0.12), { x: cx + s * (W / 2 - 0.06), y: uy, z: cz });
+  }
+  k.add('steel', kbox(0.03, 0.02, D - 0.12), { x: cx, y: uy + 0.01, z: cz });
+  // legs: a pair at each end, joined by a stretcher, with hinge brackets
+  // and fold-out braces up to the centre rail
+  const lh = DESK_Y - 0.074, lr = 0.0135;
+  for (const sx of [-1, 1]) {
+    const lx = cx + sx * (W / 2 - 0.085);
+    for (const sz of [-1, 1]) {
+      const lz = cz + sz * (D / 2 - 0.085);
+      k.add('steel', kcyl(lr, lr, lh, 20), { x: lx, y: lh / 2 + 0.012, z: lz });
+      k.add('rubber', kcyl(lr + 0.0025, lr + 0.004, 0.02, 20), { x: lx, y: 0.01, z: lz, ao: 0.01 });
+      // hinge bracket and pivot bolt
+      k.add('steel', krbox(0.04, 0.05, 0.034, 0.003), { x: lx, y: uy - 0.004, z: lz, tint: 0.9 });
+      k.add('steel', kcyl(0.005, 0.005, 0.044, 12), { x: lx, y: uy - 0.012, z: lz, rx: Math.PI / 2, tint: 1.1 });
+    }
+    // stretcher between the pair, low down
+    k.add('steel', kcyl(0.009, 0.009, D - 0.17, 16), { x: lx, y: 0.13, z: cz, rx: Math.PI / 2 });
+    // fold-out brace: from the stretcher's middle up to the centre rail
+    const from = new THREE.Vector3(lx, 0.13, cz), to = new THREE.Vector3(cx + sx * (W / 2 - 0.3), uy - 0.004, cz);
+    const len = from.distanceTo(to), mid = from.clone().add(to).multiplyScalar(0.5);
+    k.add('steel', kcyl(0.0075, 0.0075, len, 14), { x: mid.x, y: mid.y, z: mid.z, rz: sx * Math.atan2(Math.abs(to.x - from.x), to.y - from.y) });
+    k.add('steel', krbox(0.03, 0.022, 0.03, 0.003), { x: lx, y: 0.13, z: cz, tint: 0.9 });
+    k.add('steel', krbox(0.04, 0.012, 0.032, 0.002), { x: to.x, y: uy - 0.006, z: cz, tint: 0.9 });
+  }
+  g.add(k.build('table'));
   return g;
 }
 
 // ---------------------------------------------------------------- office chair
-// Black leather swivel chair: star base on casters, gas lift, stitched seat
-// and back with a headrest. Built facing +z at the origin.
+// Black leather swivel chair: a five-star base with twin-wheel casters, a
+// gas lift in a stepped shroud, a tilt mechanism with its lever, a
+// cushioned seat and back with piped edges and channel stitching, a
+// headrest on chrome posts and padded armrests. Built facing +z.
 export function buildChair() {
   const g = new THREE.Group();
-  const leatherTex = (() => {
-    const p = new Pix(32, 32);
-    p.r(0, 0, 32, 32, '#2c2930');
-    for (const x of [8, 16, 24]) for (let y = 0; y < 32; y += 2) p.p(x, y, '#151317'); // stitch lines
-    for (let i = 0; i < 40; i++) p.p((i * 13) % 32, (i * 7) % 32, '#34303a'); // sheen
-    return pixelTexture(p.canvas);
-  })();
-  const leather = lit({ map: leatherTex, gloss: 0.9 });
-  const plastic = lit({ color: '#1a181b', gloss: 0.4 });
-  const chrome = lit({ color: '#b8bcc6', gloss: 1 });
-  // five-star base with casters
+  const k = new Kit({
+    leather: lit({ color: '#2c2930', vcol: true, rough: 0.42, grain: 0.14, grainScale: [260, 260, 260] }),
+    seam: lit({ color: '#18161a', vcol: true, rough: 0.6 }),
+    plastic: lit({ color: '#1a181b', vcol: true, rough: 0.55, grain: 0.05, grainScale: [300, 300, 300] }),
+    chrome: lit({ color: '#c4c8d0', vcol: true, rough: 0.12, metal: 1 }),
+    rubber: lit({ color: '#101012', vcol: true, rough: 0.8 }),
+  }, 13);
+  // base: hub, tapered arms, casters
+  k.add('plastic', lathe([[0, 0.06], [0.05, 0.06], [0.058, 0.075], [0.05, 0.115], [0.036, 0.12], [0, 0.12]], 32));
   for (let i = 0; i < 5; i++) {
-    const a = (i / 5) * Math.PI * 2;
-    const arm = box(0.3, 0.035, 0.05, plastic, Math.cos(a) * 0.15, 0.085, Math.sin(a) * 0.15);
-    arm.rotation.y = -a;
-    arm.rotation.z = 0.06;
-    g.add(arm);
-    const wheel = cyl(0.026, 0.03, plastic, Math.cos(a) * 0.29, 0.03, Math.sin(a) * 0.29, 10);
-    wheel.rotation.x = Math.PI / 2;
-    wheel.rotation.z = a;
-    g.add(wheel);
+    const a = (i / 5) * Math.PI * 2 + 0.3, ca = Math.cos(a), sa = Math.sin(a);
+    const arm = new THREE.CylinderGeometry(0.014, 0.022, 0.29, 6, 1).toNonIndexed();
+    arm.scale(1.4, 1, 1);
+    arm.rotateZ(Math.PI / 2 - 0.1);
+    k.add('plastic', arm, { x: ca * 0.16, y: 0.082, z: sa * 0.16, ry: -a, wear: 0.5 });
+    k.add('plastic', krbox(0.034, 0.022, 0.034, 0.006), { x: ca * 0.3, y: 0.06, z: sa * 0.3 });
+    k.add('chrome', kcyl(0.004, 0.004, 0.03, 8), { x: ca * 0.3, y: 0.04, z: sa * 0.3 });
+    for (const s of [-1, 1]) k.add('rubber', kcyl(0.024, 0.024, 0.011, 20), { x: ca * 0.3 + s * sa * 0.009, y: 0.025, z: sa * 0.3 - s * ca * 0.009, rx: Math.PI / 2, ry: -a + Math.PI / 2, ao: 0.004 });
   }
-  g.add(cyl(0.045, 0.06, plastic, 0, 0.1, 0));
-  g.add(cyl(0.022, 0.3, chrome, 0, 0.26, 0));
-  g.add(cyl(0.036, 0.12, plastic, 0, 0.18, 0));
-  g.add(box(0.22, 0.04, 0.22, plastic, 0, 0.41, 0));
-  // seat, back, headrest
-  g.add(rbox(0.54, 0.1, 0.52, 0.045, leather, 0, 0.47, 0.01));
-  const back = rbox(0.5, 0.68, 0.1, 0.045, leather, 0, 0.9, -0.26);
+  // gas lift: chrome piston in a three-step shroud
+  k.add('chrome', kcyl(0.014, 0.014, 0.16, 20), { y: 0.3 });
+  for (let i = 0; i < 3; i++) k.add('plastic', kcyl(0.028 - i * 0.004, 0.03 - i * 0.004, 0.055, 24), { y: 0.14 + i * 0.05 });
+  // tilt mechanism and lever
+  k.add('plastic', krbox(0.2, 0.035, 0.24, 0.006), { y: 0.395 });
+  k.add('chrome', tube([new THREE.Vector3(0.08, 0.39, 0.05), new THREE.Vector3(0.2, 0.38, 0.08), new THREE.Vector3(0.26, 0.37, 0.1)], 0.005, 12, 6));
+  k.add('plastic', krbox(0.04, 0.018, 0.022, 0.008), { x: 0.27, y: 0.37, z: 0.1 });
+  // seat: shell, cushion, piping round the top edge, channel stitching
+  k.add('plastic', krbox(0.52, 0.03, 0.5, 0.02), { y: 0.425, z: 0.01 });
+  k.add('leather', krbox(0.54, 0.09, 0.52, 0.04, 4), { y: 0.48, z: 0.01 });
+  const pipe = (w: number, d: number, r: number) => {
+    const pts: THREE.Vector3[] = [];
+    for (let i = 0; i <= 64; i++) {
+      const a = (i / 64) * Math.PI * 2;
+      const x = Math.sign(Math.cos(a)) * Math.min(Math.abs(Math.cos(a)) * 1.6, 1) * (w / 2 - r);
+      const z = Math.sign(Math.sin(a)) * Math.min(Math.abs(Math.sin(a)) * 1.6, 1) * (d / 2 - r);
+      pts.push(new THREE.Vector3(x + Math.cos(a) * r, 0, z + Math.sin(a) * r));
+    }
+    return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, true), 160, 0.005, 6, true);
+  };
+  k.add('seam', pipe(0.53, 0.51, 0.05), { y: 0.518, z: 0.01 });
+  for (const x of [-0.09, 0.09]) k.add('seam', kbox(0.004, 0.003, 0.4), { x, y: 0.5245, z: 0.02 });
+  // back: cushion with a lumbar roll and stitching, a hard shell behind
+  const back = new THREE.Group();
+  const kb = new Kit(k.mats, 14);
+  kb.add('leather', krbox(0.5, 0.64, 0.09, 0.04, 4), { y: 0.36 });
+  kb.add('leather', krbox(0.46, 0.13, 0.05, 0.025, 3), { y: 0.14, z: 0.05 });
+  kb.add('plastic', krbox(0.48, 0.62, 0.03, 0.02), { y: 0.36, z: -0.05 });
+  for (const y of [0.3, 0.46]) kb.add('seam', kbox(0.4, 0.004, 0.004), { y, z: 0.0455 });
+  kb.add('seam', kbox(0.004, 0.44, 0.004), { y: 0.42, z: 0.0455 });
+  // headrest on two posts
+  for (const s of [-1, 1]) kb.add('chrome', kcyl(0.006, 0.006, 0.12, 12), { x: s * 0.09, y: 0.72, z: -0.02 });
+  kb.add('leather', krbox(0.34, 0.14, 0.085, 0.035, 4), { y: 0.8, z: -0.01 });
+  // spine bracket down to the mechanism
+  kb.add('plastic', krbox(0.07, 0.3, 0.03, 0.01), { y: 0.02, z: -0.06 });
+  back.add(kb.build('chair-back'));
+  back.position.set(0, 0.5, -0.24);
   back.rotation.x = -0.14;
-  g.add(back);
-  const head = rbox(0.34, 0.15, 0.09, 0.04, leather, 0, 1.32, -0.33);
-  head.rotation.x = -0.14;
-  g.add(head);
-  g.add(box(0.06, 0.34, 0.03, plastic, 0, 0.62, -0.25)); // spine bracket
-  // armrests
+  // armrests: T supports and padded tops
   for (const s of [-1, 1]) {
-    g.add(box(0.035, 0.2, 0.04, plastic, s * 0.29, 0.6, 0.02));
-    g.add(rbox(0.07, 0.035, 0.3, 0.015, plastic, s * 0.29, 0.71, 0.04));
+    k.add('plastic', krbox(0.04, 0.2, 0.045, 0.008), { x: s * 0.29, y: 0.6, z: 0.0 });
+    k.add('plastic', krbox(0.1, 0.02, 0.05, 0.006), { x: s * 0.26, y: 0.51, z: 0.0 });
+    k.add('leather', krbox(0.075, 0.035, 0.3, 0.015, 3), { x: s * 0.29, y: 0.715, z: 0.03, tint: 0.9 });
   }
+  g.add(k.build('chair'));
+  g.add(back);
   return g;
 }
 

@@ -116,47 +116,6 @@ export function stopAmbient() {
   ambient = null;
 }
 
-// ------------------------------------------------------------------ MPC voices
-export const PAD_NAMES = ['KICK', 'SNARE', 'HAT', 'OPEN', 'CLAP', 'TOM L', 'TOM H', 'RIM', 'BASS C', 'BASS E', 'BASS G', 'BASS A', 'CHORD 1', 'CHORD 2', 'CHORD 3', 'VOX'];
-
-export function playPad(i: number) {
-  const c = ac();
-  const t = c.currentTime;
-  const env = (g: GainNode, a: number, d: number, peak = 1) => {
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(peak, t + a);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + a + d);
-  };
-  const noise = (dur: number, type: BiquadFilterType, freq: number, peak: number) => {
-    const s = c.createBufferSource(); s.buffer = noiseBuffer(dur);
-    const f = c.createBiquadFilter(); f.type = type; f.frequency.value = freq;
-    const g = c.createGain(); env(g, 0.002, dur, peak);
-    s.connect(f).connect(g).connect(master); s.start(t); s.stop(t + dur + 0.05);
-  };
-  const tone = (f0: number, f1: number, dur: number, type: OscillatorType, peak: number) => {
-    const o = c.createOscillator(); o.type = type;
-    o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur * 0.6);
-    const g = c.createGain(); env(g, 0.003, dur, peak);
-    o.connect(g).connect(master); o.start(t); o.stop(t + dur + 0.05);
-  };
-  const mtof = (m: number) => 440 * 2 ** ((m - 69) / 12);
-  switch (i) {
-    case 0: tone(150, 42, 0.45, 'sine', 0.9); break;
-    case 1: tone(220, 160, 0.12, 'triangle', 0.35); noise(0.2, 'highpass', 1500, 0.5); break;
-    case 2: noise(0.05, 'highpass', 7000, 0.35); break;
-    case 3: noise(0.3, 'highpass', 6500, 0.3); break;
-    case 4: [0, 0.012, 0.024].forEach((d) => setTimeout(() => noise(0.12, 'bandpass', 1200, 0.45), d * 1000)); break;
-    case 5: tone(140, 90, 0.35, 'sine', 0.6); break;
-    case 6: tone(220, 150, 0.3, 'sine', 0.55); break;
-    case 7: tone(900, 700, 0.05, 'square', 0.18); break;
-    case 8: case 9: case 10: case 11: tone(mtof([36, 40, 43, 45][i - 8]), mtof([36, 40, 43, 45][i - 8]) * 0.99, 0.5, 'sawtooth', 0.25); break;
-    case 12: case 13: case 14:
-      [[60, 64, 67, 71], [57, 60, 64, 67], [62, 65, 69, 72]][i - 12].forEach((m) => tone(mtof(m), mtof(m), 0.7, 'triangle', 0.12));
-      break;
-    default: tone(520, 300, 0.25, 'sawtooth', 0.15); tone(780, 450, 0.25, 'sine', 0.1);
-  }
-}
-
 // small UI blip for clicks when audio is on
 export function blip(freq = 880) {
   if (!ambient) return;

@@ -1,7 +1,7 @@
 import { Pix } from '../art/pix';
 import { rng } from '../art/posters';
 import { books, photos } from '../content/data';
-import { PAD_NAMES, playPad, shutter } from '../audio';
+import { shutter } from '../audio';
 import { openModal } from './modal';
 
 const hsl = (h: number, s: number, l: number) => `hsl(${h} ${s}% ${l}%)`;
@@ -126,51 +126,3 @@ export function openBooks() {
   });
 }
 
-// ------------------------------------------------------------------ MPC
-const KEYS = ['1', '2', '3', '4', 'q', 'w', 'e', 'r', 'a', 's', 'd', 'f', 'z', 'x', 'c', 'v'];
-
-export function openMPC() {
-  let onKey: ((e: KeyboardEvent) => void) | null = null;
-  openModal({
-    title: 'MPC',
-    className: 'm-mpc',
-    onClose: () => { if (onKey) window.removeEventListener('keydown', onKey); },
-    build: (body) => {
-      body.innerHTML = `
-        <div class="mpc">
-          <div class="mpc-head">
-            <div class="mpc-lcd"><span class="mpc-prog">PROGRAM 01 · DESK KIT</span><span class="mpc-last">READY</span></div>
-            <div class="mpc-brand">MPC <i>2000-ish</i></div>
-          </div>
-          <div class="mpc-pads"></div>
-          <p class="mpc-help">Click the pads or use your keyboard: <kbd>1–4</kbd> <kbd>Q–R</kbd> <kbd>A–F</kbd> <kbd>Z–V</kbd></p>
-        </div>`;
-      const pads = body.querySelector('.mpc-pads') as HTMLElement;
-      const last = body.querySelector('.mpc-last') as HTMLElement;
-      // lay pads out like the hardware: pad 1 bottom-left
-      const order = [12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3];
-      const hit = (i: number) => {
-        playPad(i);
-        last.textContent = `PAD ${String(i + 1).padStart(2, '0')} · ${PAD_NAMES[i]}`;
-        const el = pads.querySelector(`[data-pad="${i}"]`);
-        el?.classList.remove('hit'); void (el as HTMLElement)?.offsetWidth; el?.classList.add('hit');
-      };
-      order.forEach((i) => {
-        const b = document.createElement('button');
-        b.className = 'pad';
-        b.dataset.pad = String(i);
-        b.innerHTML = `<small>${KEYS[i].toUpperCase()}</small><span>${PAD_NAMES[i]}</span>`;
-        b.addEventListener('pointerdown', (e) => { e.preventDefault(); hit(i); });
-        b.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); hit(i); } });
-        if (i === 0) b.setAttribute('data-autofocus', '');
-        pads.appendChild(b);
-      });
-      onKey = (e: KeyboardEvent) => {
-        if (e.repeat || e.metaKey || e.ctrlKey) return;
-        const i = KEYS.indexOf(e.key.toLowerCase());
-        if (i >= 0) hit(i);
-      };
-      window.addEventListener('keydown', onKey);
-    },
-  });
-}

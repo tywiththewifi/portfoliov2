@@ -3,7 +3,7 @@ import './styles.css';
 import { createHero } from './hero';
 import { loadWallArt } from './hero/room';
 import { setupInteraction } from './ui/interact';
-import { openGallery, openMPC } from './ui/panels';
+import { openGallery } from './ui/panels';
 import { ambientOn, shutter, startAmbient, stopAmbient } from './audio';
 import { mountSections } from './sections';
 import { mountBitmaps } from './fx/bitmap';
@@ -54,7 +54,6 @@ const pickStyle = (s: Style) => {
 styleBtns.forEach((b) => b.addEventListener('click', () => pickStyle(b.dataset.style as Style)));
 pickStyle(new URLSearchParams(location.search).get('style') === 'poly' ? 'poly' : 'pixel');
 const ui = setupInteraction(hero, stage, {
-  mpc: openMPC,
   camera: () => {
     hero.flash();
     shutter();
