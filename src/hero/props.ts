@@ -111,14 +111,6 @@ export function buildComputer(hover: Hover, screenTex: THREE.Texture) {
   const screen = new THREE.Mesh(geo, emissive({ map: screenTex, intensity: 1, hover }));
   screen.position.set(cx, scrY, scrZ);
   g.add(screen);
-  // sticky note on the bezel
-  const note = new THREE.Mesh(new THREE.PlaneGeometry(0.05, 0.05), lit({ hover, map: surf(0.05, 0.05, (p, W, H) => {
-    p.r(0, 0, W, H, '#ffe066'); p.r(0, 0, W, 2, '#fff0a0');
-    for (let y = 4; y < H - 2; y += 3) p.r(2, y, W - 4 - (y % 5), 1, '#8a6a2a');
-  }, 1.4) }));
-  note.position.set(cx + caseW / 2 - 0.05, scrY + scrH / 2 + 0.02, scrZ + 0.004);
-  note.rotation.z = -0.12;
-  g.add(note);
 
   // keyboard: shaded keycaps on a sloped case
   const kbW = 0.46, kbD = 0.16;

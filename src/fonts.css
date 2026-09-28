@@ -1,6 +1,7 @@
-/* Self-hosted, latin subsets. Pixelify Sans (OFL) for headings, Departure Mono
+/* Self-hosted, latin subsets. Chakra Petch (OFL) for headings, Departure Mono
    (OFL, Helena Zhang) for UI/mono, Silkscreen for tiny labels, Inter for body. */
-@font-face { font-family: 'Pixelify Sans'; font-style: normal; font-weight: 400 700; font-display: swap; src: url(./fonts/PixelifySans-var.woff2) format('woff2'); }
+@font-face { font-family: 'Chakra Petch'; font-style: normal; font-weight: 500; font-display: swap; src: url(./fonts/ChakraPetch-500.woff2) format('woff2'); }
+@font-face { font-family: 'Chakra Petch'; font-style: normal; font-weight: 600; font-display: swap; src: url(./fonts/ChakraPetch-600.woff2) format('woff2'); }
 @font-face { font-family: 'Departure Mono'; font-style: normal; font-weight: 400; font-display: swap; src: url(./fonts/DepartureMono.woff2) format('woff2'); }
 @font-face { font-family: 'Silkscreen'; font-style: normal; font-weight: 400; font-display: swap; src: url(./fonts/Silkscreen-400-normal.woff2) format('woff2'); }
 @font-face { font-family: 'Inter'; font-style: normal; font-weight: 400; font-display: swap; src: url(./fonts/Inter-400-normal.woff2) format('woff2'); }
