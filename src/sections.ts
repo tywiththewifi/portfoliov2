@@ -2,22 +2,64 @@ import { Pix } from './art/pix';
 import { rng } from './art/posters';
 import { iconURL, type IconId } from './art/icons';
 import { paperize } from './art/paper';
-import { mountAscii } from './art/ascii';
-import { projectIcons, projects, services, site } from './content/data';
+import { projects, services, site } from './content/data';
 
 const hsl = (h: number, s: number, l: number) => `hsl(${h} ${s}% ${l}%)`;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const ARROW = '<svg viewBox="0 0 9 9" aria-hidden="true"><path d="M1.5 4.5h6M5 2l2.5 2.5L5 7" fill="none" stroke="currentColor" stroke-width="1.1"/></svg>';
 
-function workThumb(hue: number, k: number) {
-  const g = new Pix(96, 56);
+// Placeholder project visual: a little pixel mock of the thing, per kind.
+function workVisual(hue: number, k: number) {
+  const W = 200, H = 124;
+  const g = new Pix(W, H);
   const R = rng(900 + k);
-  g.grad(0, 0, 96, 56, [hsl(hue, 45, 16), hsl(hue + 25, 55, 30), hsl(hue + 40, 60, 44)]);
-  for (let i = 0; i < 6; i++) {
-    const w = 10 + Math.floor(R() * 30), h = 6 + Math.floor(R() * 18);
-    g.r(Math.floor(R() * (96 - w)), Math.floor(R() * (56 - h)), w, h, hsl(hue + i * 28, 70, 50 + i * 5));
+  const c = (dh: number, s: number, l: number) => hsl(hue + dh, s, l);
+  g.grad(0, 0, W, H, [c(0, 40, 14), c(20, 50, 24), c(35, 55, 34)]);
+  g.dens(0, 0, W, H, '#000000', 0.12);
+  // browser window
+  const wx = 14, wy = 12, ww = W - 28, wh = H - 24;
+  g.r(wx + 3, wy + 4, ww, wh, 'rgba(0,0,0,.35)');
+  g.r(wx, wy, ww, wh, '#f3ead9');
+  g.r(wx, wy, ww, 9, '#d9cdb8');
+  ['#e8483b', '#f2b233', '#5cbf6a'].forEach((d, i) => g.r(wx + 4 + i * 6, wy + 3, 3, 3, d));
+  g.r(wx + 26, wy + 2, ww - 34, 5, '#efe4d0');
+  const x0 = wx + 8, y0 = wy + 15, iw = ww - 16;
+  if (k % 4 === 0) {
+    // landing page: big hero shape, headline, three cards
+    g.grad(x0, y0, iw, 44, [c(0, 60, 30), c(30, 70, 50)]);
+    g.circle(x0 + iw - 30, y0 + 22, 15, c(40, 90, 70));
+    g.dens(x0, y0 + 30, iw, 14, c(-10, 50, 22), 0.7);
+    g.r(x0 + 8, y0 + 12, 60, 6, '#fff7ea'); g.r(x0 + 8, y0 + 22, 40, 3, 'rgba(255,247,234,.7)');
+    for (let i = 0; i < 3; i++) { g.r(x0 + i * (iw / 3) + 1, y0 + 50, iw / 3 - 4, 22, c(i * 30, 30, 85)); g.r(x0 + i * (iw / 3) + 5, y0 + 55, 20, 3, c(i * 30, 40, 40)); }
+  } else if (k % 4 === 1) {
+    // app: two phones on a tinted panel
+    g.r(x0, y0, iw, 78, c(0, 30, 88));
+    for (let i = 0; i < 2; i++) {
+      const px = x0 + 34 + i * 62, py = y0 + 6 + i * 6;
+      g.r(px, py, 38, 66, '#1c1418'); g.r(px + 2, py + 4, 34, 58, c(i * 20, 45, 94));
+      g.r(px + 5, py + 8, 20, 4, c(0, 50, 35));
+      for (let j = 0; j < 4; j++) g.r(px + 5, py + 16 + j * 11, 28, 8, c(j * 25, 55, 70 - j * 6));
+    }
+  } else if (k % 4 === 2) {
+    // audio tool: timeline with waveforms and a playhead
+    g.r(x0, y0, iw, 78, '#221a1e');
+    for (let t = 0; t < 4; t++) {
+      g.r(x0 + 2, y0 + 4 + t * 18, 18, 14, c(t * 35, 50, 45));
+      for (let x = 0; x < iw - 26; x++) {
+        const a = Math.abs(Math.sin(x * 0.2 + t) * Math.sin(x * 0.037 + t * 2)) * 6 + R() * 1.5;
+        g.r(x0 + 24 + x, Math.round(y0 + 11 + t * 18 - a), 1, Math.max(1, Math.round(a * 2)), c(t * 35, 70, 62));
+      }
+    }
+    g.r(x0 + 24 + Math.floor(iw * 0.45), y0, 1, 78, '#ff7a2e');
+  } else {
+    // brand: logo lockup plus a grid of applications
+    g.r(x0, y0, iw, 78, c(0, 25, 90));
+    g.circle(x0 + 26, y0 + 22, 13, c(0, 70, 45)); g.circle(x0 + 26, y0 + 22, 6, c(0, 25, 90));
+    g.r(x0 + 46, y0 + 16, 50, 7, c(0, 50, 25)); g.r(x0 + 46, y0 + 26, 34, 3, c(0, 30, 45));
+    for (let i = 0; i < 4; i++) g.r(x0 + 4 + i * (iw / 4), y0 + 46, iw / 4 - 6, 28, c(i * 18, 60, 40 + i * 10));
   }
+  g.grain(0.05, k + 3);
   return g.canvas.toDataURL();
 }
 
@@ -33,7 +75,13 @@ function whenVisible(el: Element) {
 function drawLink(board: HTMLElement, svg: SVGSVGElement, a: HTMLElement, b: HTMLElement) {
   const br = board.getBoundingClientRect(), ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
   let d: string;
-  if (Math.abs(ra.left - rb.left) < 4) {
+  if (rb.top > ra.bottom + 4) {
+    // stacked: drop into the gutter between rows, cross, drop into the next card
+    const x1 = ra.left + ra.width / 2 - br.left, x2 = rb.left + rb.width / 2 - br.left;
+    const y1 = ra.bottom - br.top, y2 = rb.top - br.top, gy = (y1 + y2) / 2;
+    const s = Math.sign(x2 - x1) || 1;
+    d = Math.abs(x2 - x1) < 4 ? `M${x1} ${y1} V${y2}` : `M${x1} ${y1} V${gy - 4} Q${x1} ${gy} ${x1 + s * 4} ${gy} H${x2 - s * 4} Q${x2} ${gy} ${x2} ${gy + 4} V${y2}`;
+  } else if (Math.abs(ra.left - rb.left) < 4) {
     const x = ra.left - br.left + 14;
     d = `M${x} ${ra.bottom - br.top} V${rb.top - br.top}`;
   } else {
@@ -77,20 +125,29 @@ async function play(board: HTMLElement, svg: SVGSVGElement, cards: HTMLElement[]
 }
 
 export function mountSections() {
-  // ------------------------------------------------ work pegboard
+  // ------------------------------------------------ work: stacked rows
   const workBoard = document.getElementById('workBoard')!;
-  const workGrid = document.getElementById('workCards')!;
-  const workCards = projects.map((p, k) => {
-    const el = card({ icon: projectIcons[k % projectIcons.length], title: p.title, sub: `${p.year} · ${p.role}`, href: '#top', cls: 'kc-work' });
-    el.setAttribute('data-open-work', '');
-    el.insertAdjacentHTML('afterbegin', `<img class="kc-thumb px" src="${workThumb(p.hue, k)}" alt="" />`);
-    el.insertAdjacentHTML('beforeend', `<span class="kc-tags">${p.tags.join(' · ')}</span>`);
-    workGrid.appendChild(el);
-    return el as HTMLElement;
+  const workList = document.getElementById('workRows')!;
+  const workVis = projects.map((p, k) => {
+    const li = document.createElement('li');
+    li.className = `work-row${k % 2 ? ' flip' : ''}`;
+    li.innerHTML = `
+      <a class="kc wr-vis" href="#top" data-open-work aria-label="Open ${p.title}">
+        <img class="px" src="${workVisual(p.hue, k)}" alt="" />
+      </a>
+      <div class="wr-info">
+        <p class="wr-idx"><span>${String(k + 1).padStart(2, '0')}</span> ${p.year} · ${p.role}</p>
+        <h3>${p.title}</h3>
+        <p class="wr-blurb">${p.blurb}</p>
+        <ul class="wr-tags">${p.tags.map((t) => `<li>${t}</li>`).join('')}</ul>
+        <a class="wr-go" href="#top" data-open-work>View project ${ARROW}</a>
+      </div>`;
+    workList.appendChild(li);
+    return li.querySelector('.wr-vis') as HTMLElement;
   });
   paperize(workBoard, { tone: 'board', seed: 29, depth: 3 });
-  workCards.forEach((c, i) => paperize(c, { tone: 'card', seed: 300 + i * 17, depth: 2 }));
-  void play(workBoard, workBoard.querySelector('svg')!, workCards);
+  workVis.forEach((c, i) => paperize(c, { tone: 'card', seed: 300 + i * 17, depth: 2 }));
+  void play(workBoard, workBoard.querySelector('svg')!, workVis);
 
   // ------------------------------------------------ services kanban
   const svBoard = document.getElementById('serviceBoard')!;
@@ -122,7 +179,6 @@ export function mountSections() {
 
   // ------------------------------------------------ paper, ascii, text
   document.querySelectorAll<HTMLElement>('.card-paper').forEach((el, i) => paperize(el, { tone: 'card', seed: 50 + i, depth: 2, lines: [14, 16] }));
-  document.querySelectorAll<HTMLElement>('[data-ascii]').forEach(mountAscii);
 
   const mail = document.getElementById('mailLink') as HTMLAnchorElement;
   mail.href = `mailto:${site.email}`;

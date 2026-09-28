@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { HeroView } from './HeroView';
 import { shared } from './materials';
-import { buildRoom } from './room';
+import { buildRoom, type WallArt } from './room';
 import {
   buildAudioStack, buildCamera, buildComputer, buildDeskClutter, buildLamp, buildMPC,
   buildRubberPlant, buildSpiderPlant, buildTurntable, makeScreen,
@@ -20,14 +20,14 @@ export type Hotspot = {
   anchor: () => THREE.Vector3; // tooltip anchor in world space
 };
 
-export function createHero(canvas: HTMLCanvasElement, stage: HTMLElement) {
+export function createHero(canvas: HTMLCanvasElement, stage: HTMLElement, art: WallArt) {
   const view = new HeroView(canvas, stage);
   const S = view.scene;
   const H = {
     computer: { value: 0 }, shelf: { value: 0 }, mpc: { value: 0 }, camera: { value: 0 }, lamp: { value: 0 }, turntable: { value: 0 },
   };
 
-  const room = buildRoom({ shelf: H.shelf });
+  const room = buildRoom({ shelf: H.shelf }, art);
   S.add(room.group);
 
   const screen = makeScreen();
@@ -43,7 +43,7 @@ export function createHero(canvas: HTMLCanvasElement, stage: HTMLElement) {
   S.add(lamp.group);
   const spider = buildSpiderPlant();
   S.add(spider.group);
-  const rubber = buildRubberPlant();
+  const rubber = buildRubberPlant(new THREE.Vector3(0.4, 0.76 + 0.26, -0.5), 0.72);
   S.add(rubber.group);
   const camera = buildCamera(H.camera);
   S.add(camera.group);
@@ -57,12 +57,13 @@ export function createHero(canvas: HTMLCanvasElement, stage: HTMLElement) {
     { id: 'mpc', label: 'MPC', hint: 'play the pads', hover: H.mpc, target: 0, object: mpc.group, anchor: () => new THREE.Vector3(-0.72, 0.92, -0.18) },
     { id: 'camera', label: 'Camera', hint: 'photo roll', hover: H.camera, target: 0, object: camera.group, anchor: () => camera.group.position.clone().add(new THREE.Vector3(0, 0.14, 0)) },
     { id: 'turntable', label: 'Turntable', hint: 'sound on / off', hover: H.turntable, target: 0, object: turntable.group, anchor: () => new THREE.Vector3(-1.22, 0.98, -0.24) },
-    { id: 'lamp', label: 'Lamp', hint: 'lights on / off', hover: H.lamp, target: 0, object: lamp.group, anchor: () => lamp.bulb.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.16, 0)) },
+    { id: 'lamp', label: 'Lamp', hint: 'drag to aim · click to switch', hover: H.lamp, target: 0, object: lamp.group, anchor: () => lamp.bulb.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.16, 0)) },
   ];
 
   const tmp = new THREE.Vector3();
   const tmpQ = new THREE.Quaternion();
-  const lampState = { on: 1, flicker: 0, aimX: 0, aimY: 0 };
+  // aim is set by dragging the lamp head; tx/ty are the targets it eases to
+  const lampState = { on: 1, flicker: 0, aimX: 0, aimY: 0, tx: 0, ty: 0 };
   const soundState = { on: false };
   let spin = 0;
 
@@ -73,14 +74,16 @@ export function createHero(canvas: HTMLCanvasElement, stage: HTMLElement) {
       h.hover.value += (Math.max(h.target, idle) - h.hover.value) * Math.min(1, dt * 10);
     });
 
-    // lamp head leans toward the cursor; light follows the bulb
+    // lamp head follows the drag target; the light follows the bulb
     const m = view.mouse;
-    lampState.aimX += (m.x - lampState.aimX) * Math.min(1, dt * 3);
-    lampState.aimY += (m.y - lampState.aimY) * Math.min(1, dt * 3);
+    lampState.aimX += (lampState.tx - lampState.aimX) * Math.min(1, dt * 6);
+    lampState.aimY += (lampState.ty - lampState.aimY) * Math.min(1, dt * 6);
     const lh = H.lamp.value;
-    lamp.upper.rotation.z = 1.25 + lampState.aimX * 0.12 + Math.sin(t * 1.3) * 0.008 + lh * 0.05 * Math.sin(t * 7);
-    lamp.shadeHolder.rotation.z = -1.98 - lampState.aimY * 0.1 - lampState.aimX * 0.08;
-    lamp.shadeHolder.rotation.x = lampState.aimX * 0.25;
+    lamp.upper.rotation.z = 1.25 + lampState.aimX * 0.42 + Math.sin(t * 1.3) * 0.006;
+    lamp.upper.rotation.y = lampState.aimX * 0.1;
+    lamp.shadeHolder.rotation.z = -1.98 - lampState.aimY * 0.55;
+    lamp.shadeHolder.rotation.x = lampState.aimX * 0.35;
+    lamp.switchPivot.rotation.x += ((lampState.on > 0.5 ? 0.35 : -0.35) - lamp.switchPivot.rotation.x) * Math.min(1, dt * 20);
     lamp.bulb.getWorldPosition(shared.uLampPos.value);
     lamp.shadeHolder.getWorldQuaternion(tmpQ);
     shared.uLampDir.value.set(0, -1, 0).applyQuaternion(tmpQ).normalize();
@@ -147,6 +150,11 @@ export function createHero(canvas: HTMLCanvasElement, stage: HTMLElement) {
 
   return {
     view, hotspots, computer, camera, lampState, mpc, soundState,
+    // Move the lamp aim by a drag delta (in stage fractions).
+    aimLamp(dx: number, dy: number) {
+      lampState.tx = Math.max(-1, Math.min(1, lampState.tx + dx * 2.2));
+      lampState.ty = Math.max(-1, Math.min(1, lampState.ty + dy * 2.2));
+    },
     toggleLamp() {
       lampState.on = lampState.on ? 0.12 : 1;
       lampState.flicker = 0.25;

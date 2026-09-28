@@ -26,12 +26,10 @@ export const site = {
 };
 
 export const projects: Project[] = [
-  { slug: 'project-one', title: 'Project One', year: '2026', role: 'Design + Build', blurb: 'A short line about what this project is and why it mattered.', tags: ['Web', 'WebGL'], hue: 8 },
-  { slug: 'project-two', title: 'Project Two', year: '2025', role: 'Product Design', blurb: 'A short line about what this project is and why it mattered.', tags: ['App', 'iOS'], hue: 170 },
-  { slug: 'project-three', title: 'Project Three', year: '2025', role: 'Creative Dev', blurb: 'A short line about what this project is and why it mattered.', tags: ['Music', 'Audio'], hue: 38 },
-  { slug: 'project-four', title: 'Project Four', year: '2024', role: 'Brand + Web', blurb: 'A short line about what this project is and why it mattered.', tags: ['Brand', 'Web'], hue: 330 },
-  { slug: 'project-five', title: 'Project Five', year: '2024', role: 'Engineering', blurb: 'A short line about what this project is and why it mattered.', tags: ['Tools', 'Node'], hue: 200 },
-  { slug: 'project-six', title: 'Project Six', year: '2023', role: 'Art Direction', blurb: 'A short line about what this project is and why it mattered.', tags: ['Print', 'Zine'], hue: 95 },
+  { slug: 'project-one', title: 'Project One', year: '2026', role: 'Design + Build', blurb: 'Two or three lines about the project: the problem, what you made, and the result. A number or a quote from the client goes a long way here.', tags: ['Web', 'WebGL', 'Motion'], hue: 18 },
+  { slug: 'project-two', title: 'Project Two', year: '2025', role: 'Product Design', blurb: 'Two or three lines about the project: the problem, what you made, and the result. A number or a quote from the client goes a long way here.', tags: ['App', 'iOS', 'Design system'], hue: 172 },
+  { slug: 'project-three', title: 'Project Three', year: '2025', role: 'Creative Dev', blurb: 'Two or three lines about the project: the problem, what you made, and the result. A number or a quote from the client goes a long way here.', tags: ['Music', 'Audio', 'Tools'], hue: 38 },
+  { slug: 'project-four', title: 'Project Four', year: '2024', role: 'Brand + Web', blurb: 'Two or three lines about the project: the problem, what you made, and the result. A number or a quote from the client goes a long way here.', tags: ['Brand', 'Identity', 'Web'], hue: 330 },
 ];
 
 export const books = [

@@ -2,6 +2,11 @@ import * as THREE from 'three';
 import { Pix } from '../art/pix';
 import { flyer, poster, rng, PW, PH, type PosterId } from '../art/posters';
 import { emissive, lit, pixelTexture } from './materials';
+import floydUrl from '../art/wall/floyd.png';
+import tr909Url from '../art/wall/tr909.png';
+import mixerUrl from '../art/wall/mixer.png';
+import chiefUrl from '../art/wall/chief.png';
+import marioUrl from '../art/wall/mario.png';
 
 // World units are metres. The back wall sits at z = WALL_Z; the desk top at y = DESK_Y.
 export const WALL_Z = -0.7;
@@ -17,20 +22,42 @@ function box(w: number, h: number, d: number, mat: THREE.Material | THREE.Materi
 }
 
 // ---------------------------------------------------------------- wall art
-// Where each feature poster hangs, as the poster's centre on the wall (metres).
-const WALL_POSTERS: [PosterId, number, number][] = [
-  ['helmets', -0.46, 1.36],
-  ['bolt', 0.0, 1.5],
-  ['crown', 0.46, 1.4],
-  ['rain', -1.3, 1.1],
-  ['hero', -0.88, 1.14],
-  ['keys', 1.2, 1.3],
-  ['drum', 0.86, 1.72],
-  ['stones', -0.1, 1.9],
-  ['cube', 0.42, 1.86],
+
+const PERSONAL = { floyd: floydUrl, tr909: tr909Url, mixer: mixerUrl, chief: chiefUrl, mario: marioUrl };
+export type WallArt = Record<keyof typeof PERSONAL, HTMLImageElement>;
+
+// Personal picks are pixelated photos; load them before the wall is drawn.
+export async function loadWallArt(): Promise<WallArt> {
+  const entries = await Promise.all(Object.entries(PERSONAL).map(([k, url]) => new Promise<[string, HTMLImageElement]>((res, rej) => {
+    const im = new Image();
+    im.onload = () => res([k, im]);
+    im.onerror = rej;
+    im.src = url;
+  })));
+  return Object.fromEntries(entries) as WallArt;
+}
+
+// Where each piece hangs: centre on the wall in metres, and printed width.
+type Hang = { id: PosterId | keyof WallArt; cx: number; cy: number; w?: number; tilt?: number };
+const WALL: Hang[] = [
+  // homages first so the personal picks layer on top
+  { id: 'crown', cx: 0.44, cy: 1.42 },
+  { id: 'keys', cx: 1.2, cy: 1.78 },
+  { id: 'helmets', cx: -0.9, cy: 1.16 },
+  { id: 'hero', cx: -1.3, cy: 1.12 },
+  { id: 'rain', cx: -0.62, cy: 1.02 },
+  { id: 'stones', cx: -0.98, cy: 2.04 },
+  { id: 'bolt', cx: -1.45, cy: 2.0 },
+  { id: 'cube', cx: 1.22, cy: 2.0 },
+  // personal picks, kept in the band the default camera sees
+  { id: 'floyd', cx: 0.0, cy: 1.55, w: 0.34 },
+  { id: 'chief', cx: -0.47, cy: 1.2, w: 0.3 },
+  { id: 'tr909', cx: 0.5, cy: 1.74, w: 0.48 },
+  { id: 'mixer', cx: 1.27, cy: 1.4, w: 0.27 },
+  { id: 'mario', cx: 0.95, cy: 1.22, w: 0.3 },
 ];
 
-function collageTexture(wx0: number, wx1: number, wy0: number, wy1: number) {
+function collageTexture(wx0: number, wx1: number, wy0: number, wy1: number, art: WallArt) {
   const W = Math.round((wx1 - wx0) * PX_PER_M), H = Math.round((wy1 - wy0) * PX_PER_M);
   const g = new Pix(W, H);
   const R = rng(77);
@@ -42,23 +69,27 @@ function collageTexture(wx0: number, wx1: number, wy0: number, wy1: number) {
         const w = 36 + Math.floor(R() * 44), h = 44 + Math.floor(R() * 48);
         const f = flyer(Math.floor(R() * 1e9), w, h);
         g.ctx.drawImage(f, x + Math.floor(R() * 12), y + Math.floor(R() * 12));
-        // tape corner
         if (R() < 0.35) g.r(x + 4, y, 9, 4, 'rgba(243,236,216,.85)');
       }
     }
   }
-  // feature posters
-  for (const [id, cx, cy] of WALL_POSTERS) {
-    const c = poster(id);
-    const pw = Math.round(PW * 0.86), ph = Math.round(PH * 0.86);
-    const x = Math.round((cx - wx0) * PX_PER_M - pw / 2), y = Math.round((wy1 - cy) * PX_PER_M - ph / 2);
-    g.r(x + 3, y + 4, pw, ph, 'rgba(40,10,20,0.5)');
-    g.ctx.drawImage(c, x, y, pw, ph);
-    g.r(x + Math.floor(pw / 2) - 7, y - 3, 14, 6, 'rgba(239,230,207,.85)');
+  // feature pieces: drop shadow, paper mat for photos, tape strip, pins
+  for (const h of WALL) {
+    const personal = h.id in art;
+    const src: CanvasImageSource = personal ? art[h.id as keyof WallArt] : poster(h.id as PosterId);
+    const iw = personal ? (src as HTMLImageElement).naturalWidth : PW;
+    const ih = personal ? (src as HTMLImageElement).naturalHeight : PH;
+    const pw = Math.round((h.w ?? 0.33) * PX_PER_M);
+    const ph = Math.round((pw * ih) / iw);
+    const x = Math.round((h.cx - wx0) * PX_PER_M - pw / 2), y = Math.round((wy1 - h.cy) * PX_PER_M - ph / 2);
+    const m = personal ? 4 : 0;
+    g.r(x - m + 3, y - m + 5, pw + m * 2, ph + m * 2, 'rgba(40,10,20,0.5)');
+    if (personal) { g.r(x - m, y - m, pw + m * 2, ph + m * 2, '#f2eadc'); g.r(x - m, y - m, pw + m * 2, 1, '#ffffff'); }
+    g.ctx.drawImage(src, x, y, pw, ph);
+    g.r(x + Math.floor(pw / 2) - 7, y - m - 3, 14, 6, 'rgba(239,230,207,.85)');
     g.p(x + 3, y + 3, '#c9c2b0'); g.p(x + pw - 4, y + 3, '#c9c2b0');
   }
-  const t = pixelTexture(g.canvas);
-  return t;
+  return pixelTexture(g.canvas);
 }
 
 // ---------------------------------------------------------------- wood + spines
@@ -131,12 +162,12 @@ export type RoomParts = {
   rain: THREE.Mesh;
 };
 
-export function buildRoom(hover: { shelf: { value: number } }): RoomParts {
+export function buildRoom(hover: { shelf: { value: number } }, art: WallArt): RoomParts {
   const group = new THREE.Group();
 
   // ---- back wall (with a hole for the window) + side wall + ceiling + floor
   const wx0 = -2.8, wx1 = 2.8, wy0 = 0, wy1 = 3.0;
-  const collage = collageTexture(wx0, wx1, wy0, wy1);
+  const collage = collageTexture(wx0, wx1, wy0, wy1, art);
   const wallMat = lit({ map: collage });
   const addWallPiece = (x0: number, x1: number, y0: number, y1: number) => {
     const geo = new THREE.PlaneGeometry(x1 - x0, y1 - y0);

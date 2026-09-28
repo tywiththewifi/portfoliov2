@@ -43,7 +43,7 @@ const POST_FRAG = /* glsl */ `
     float y = gl_FragCoord.y - .5;
     if (y < uFade) {
       float k = (y + 1.) / (uFade + 1.);
-      float h = hash12(floor(gl_FragCoord.xy) + 7.);
+      float h = hash12(floor(gl_FragCoord.xy / 3.) + 3.) * .55 + hash12(floor(gl_FragCoord.xy) + 7.) * .45; // clumpy, not salt
       if (h > pow(k, .55)) c = h > .985 ? uBloomCol : (h > .95 ? mix(uBg, c, .5) : uBg);
     }
     gl_FragColor = vec4(c, 1.);
@@ -66,6 +66,7 @@ export class HeroView {
   P = 3;
   lw = 1;
   lh = 1;
+  private scroll = 0;
 
   // Camera rig: a resting pose plus a focus pose we can blend into (CRT zoom).
   readonly rig = {
@@ -151,10 +152,24 @@ export class HeroView {
     this.canvas.style.height = `${lh * P}px`;
     this.rt.setSize(lw, lh);
     this.post.uniforms.uRes.value.set(lw, lh);
-    this.post.uniforms.uFade.value = Math.ceil(30 / P);
+    this.applyFade();
     this.camera.aspect = lw / lh;
     this.updateCamera();
     if (!this.running) this.render();
+  }
+
+  // Scroll progress through the hero (0..1): the dissolve band at the bottom
+  // eats upward into the room as the page scrolls, like Agentic's hero.
+  setScroll(p: number) {
+    p = Math.max(0, Math.min(1, p));
+    if (p === this.scroll) return;
+    this.scroll = p;
+    this.applyFade();
+    if (!this.running) this.render();
+  }
+
+  private applyFade() {
+    this.post.uniforms.uFade.value = Math.ceil(30 / this.P) + this.scroll * this.lh * 0.62;
   }
 
   // Keep the desk framed on any aspect ratio: widen the FOV on tall screens.

@@ -173,7 +173,7 @@ export function makeScreen() {
   const W = 108, H = 81;
   const g = new Pix(W, H);
   const tex = pixelTexture(g.canvas);
-  const lines = ['> BOOT YOURNAME.OS', '> MOUNT /WORK', '> 6 PROJECTS FOUND', '> READY_'];
+  const lines = ['> BOOT YOURNAME.OS', '> MOUNT /WORK', '> 4 PROJECTS FOUND', '> READY_'];
   const draw = (t: number, hover: number, os = false) => {
     if (os) { g.grad(0, 0, W, H, ['#0a3326', '#062019']); tex.needsUpdate = true; return; }
     g.grad(0, 0, W, H, ['#07261d', '#0b3a2b', '#082c21', '#061f18']);
@@ -334,29 +334,39 @@ export function buildTurntable(hover: Hover) {
 // ---------------------------------------------------------------- speaker + stack
 export function buildAudioStack() {
   const g = new THREE.Group();
-  const veneer = lit({ map: surf(0.2, 0.31, (p, W, H) => {
+  // a matched pair of desktop speakers either side of the CRT
+  const SW = 0.15, SH = 0.25, SD = 0.16;
+  const veneer = lit({ map: surf(SD, SH, (p, W, H) => {
     p.r(0, 0, W, H, '#6a3a26');
     const R = rng(7);
     for (let x = 0; x < W; x++) if (R() < 0.35) p.r(x, 0, 1, H, R() < 0.5 ? '#5a3020' : '#7a4630');
     p.r(0, 0, W, 1, '#8a5a3a');
   }) });
-  const baffle = lit({ map: surf(0.19, 0.31, (p, W, H) => {
+  const baffle = lit({ map: surf(SW, SH, (p, W, H) => {
     p.r(0, 0, W, H, '#1e1a1c');
     p.r(0, 0, W, 2, '#3a3234');
-    // tweeter
-    p.circle(W / 2, 18, 10, '#141012');
-    p.sphere(W / 2, 18, 6, 6, ['#2a2426', '#5a5256', '#a8a0a4', '#e8e0e4']);
-    // woofer: surround, cone, dust cap
-    const wy = 60;
-    p.circle(W / 2, wy, 25, '#0e0c0d');
-    p.circle(W / 2, wy, 23, '#2a2426');
-    p.sphere(W / 2, wy, 20, 20, ['#141012', '#1e1a1c', '#2e282a', '#3e3638', '#4e4648'], 0.3, 0.4);
-    p.sphere(W / 2, wy, 6, 6, ['#1a1618', '#3a3436', '#6a6266', '#9a9296']);
-    // bass port + badge
-    p.r(W / 2 - 14, H - 12, 28, 5, '#070606'); p.r(W / 2 - 14, H - 12, 28, 1, '#2a2426');
-    p.text('HI-FI', W / 2 - 9, 32, '#8a8286');
+    const cx = Math.round(W / 2);
+    p.circle(cx, 15, 8, '#141012');
+    p.sphere(cx, 15, 5, 5, ['#2a2426', '#5a5256', '#a8a0a4', '#e8e0e4']);
+    const wy = 45;
+    p.circle(cx, wy, 20, '#0e0c0d');
+    p.circle(cx, wy, 18, '#2a2426');
+    p.sphere(cx, wy, 16, 16, ['#141012', '#1e1a1c', '#2e282a', '#3e3638', '#4e4648'], 0.3, 0.4);
+    p.sphere(cx, wy, 5, 5, ['#1a1618', '#3a3436', '#6a6266', '#9a9296']);
+    p.r(cx - 10, H - 9, 20, 4, '#070606'); p.r(cx - 10, H - 9, 20, 1, '#2a2426');
+    p.r(W - 8, H - 5, 3, 2, '#62ff7a');
+    p.text('HI-FI', cx - 9, 27, '#8a8286');
   }) });
-  g.add(box(0.19, 0.31, 0.2, mats6({ pz: baffle, px: veneer, nx: veneer, py: veneer }, veneer), 0.4, DESK_Y + 0.155, WALL_Z + 0.2));
+  const speakerAt = (x: number) => {
+    const m = box(SW, SH, SD, mats6({ pz: baffle, px: veneer, nx: veneer, py: veneer }, veneer), x, DESK_Y + SH / 2 + 0.01, WALL_Z + 0.2);
+    m.rotation.y = x < 0 ? 0.18 : -0.18;
+    g.add(m);
+    // little foam feet
+    g.add(box(SW * 0.9, 0.01, SD * 0.8, lit({ color: '#141012' }), x, DESK_Y + 0.005, WALL_Z + 0.2));
+    return m;
+  };
+  const speakers = [speakerAt(-0.37), speakerAt(0.4)];
+  const speakerTop = new THREE.Vector3(0.4, DESK_Y + SH + 0.01, WALL_Z + 0.2);
 
   const cab = lit({ color: '#2a2226' });
   const stackX = 0.76;
@@ -420,7 +430,7 @@ export function buildAudioStack() {
     cas.rotation.y = (R() - 0.5) * 0.3;
     g.add(cas);
   }
-  return { group: g, meters: [vuL, vuR], tunerGlow, counter, units };
+  return { group: g, meters: [vuL, vuR], tunerGlow, counter, units, speakers, speakerTop };
 }
 
 // ---------------------------------------------------------------- lamp
@@ -432,7 +442,13 @@ export function buildLamp(hover: Hover) {
   const baseX = 1.2, baseZ = WALL_Z + 0.3;
   g.add(cyl(0.08, 0.095, 0.03, metal, baseX, DESK_Y + 0.015, baseZ, 24));
   g.add(cyl(0.03, 0.04, 0.03, joint, baseX, DESK_Y + 0.04, baseZ, 12));
-  g.add(box(0.012, 0.006, 0.02, lit({ color: '#1a1a1a' }), baseX + 0.06, DESK_Y + 0.032, baseZ + 0.04));
+  // rocker switch on the base: tilts when toggled
+  g.add(box(0.03, 0.014, 0.04, joint, baseX + 0.055, DESK_Y + 0.036, baseZ + 0.03));
+  const rocker = box(0.022, 0.008, 0.03, lit({ color: '#e8483b', hover }), 0, 0, 0);
+  const switchPivot = new THREE.Group();
+  switchPivot.position.set(baseX + 0.055, DESK_Y + 0.045, baseZ + 0.03);
+  switchPivot.add(rocker);
+  g.add(switchPivot);
 
   const armPair = (len: number) => {
     const grp = new THREE.Group();
@@ -485,7 +501,7 @@ export function buildLamp(hover: Hover) {
   inner.rotation.x = Math.PI / 2;
   inner.position.set(0, -0.165, 0);
   shadeHolder.add(inner);
-  return { group: g, upper, head, shadeHolder, bulb, inner };
+  return { group: g, upper, head, shadeHolder, bulb, inner, switchPivot, rocker };
 }
 
 // ---------------------------------------------------------------- plants
@@ -600,9 +616,12 @@ function rubberLeafTex(shade: number) {
   return pixelTexture(g.canvas);
 }
 
-export function buildRubberPlant() {
+export function buildRubberPlant(at: THREE.Vector3, scale = 1) {
+  const root = new THREE.Group();
   const g = new THREE.Group();
-  const x = -0.37, z = WALL_Z + 0.3;
+  root.add(g);
+  const x = 0, z = 0;
+  const DESK_Y = 0;
   g.add(cyl(0.09, 0.07, 0.15, lit({ map: potTex('#d8c0a0', '#e8d4b8') }), x, DESK_Y + 0.075, z, 20));
   g.add(cyl(0.085, 0.085, 0.01, lit({ color: '#3a2420' }), x, DESK_Y + 0.15, z, 20));
   const stem = lit({ color: '#5a3a2a' });
@@ -612,7 +631,7 @@ export function buildRubberPlant() {
   const s2 = box(0.012, 0.36, 0.012, stem, x - 0.04, DESK_Y + 0.33, z + 0.02);
   s2.rotation.z = 0.3;
   g.add(s2);
-  const leafMats = [0, 1].map((k) => lit({ map: rubberLeafTex(k), side: THREE.DoubleSide, wind: 0.012, windAnchor: DESK_Y + 0.15, gloss: 0.9 }));
+  const leafMats = [0, 1].map((k) => lit({ map: rubberLeafTex(k), side: THREE.DoubleSide, wind: 0.012, windAnchor: at.y + 0.15 * scale, gloss: 0.9 }));
   const R = rng(21);
   for (let i = 0; i < 17; i++) {
     const branch = i > 12;
@@ -629,7 +648,9 @@ export function buildRubberPlant() {
   }
   // new leaf sheath at the top
   g.add(box(0.008, 0.05, 0.008, lit({ color: '#c8584a' }), x + 0.02, DESK_Y + 0.8, z));
-  return { group: g, mats: leafMats, center: new THREE.Vector3(x, DESK_Y + 0.4, z) };
+  root.position.copy(at);
+  root.scale.setScalar(scale);
+  return { group: root, mats: leafMats, center: at.clone().add(new THREE.Vector3(0, 0.4 * scale, 0)) };
 }
 
 // ---------------------------------------------------------------- camera + small stuff

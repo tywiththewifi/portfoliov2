@@ -20,10 +20,14 @@ npm run build    # typecheck + production build to dist/
 | `src/hero/room.ts` | Walls, poster collage, window + teal city, desk, bookshelf |
 | `src/hero/props.ts` | CRT, MPC, turntable, speaker/decks, lamp, plants, camera |
 | `src/hero/dust.ts` | Glowing dust motes |
-| `src/art/posters.ts` | Pixel poster homages (wall + page sections) |
+| `src/art/wall/` | Your personal wall pieces (pixelated PNGs); layout in `WALL` in `room.ts` |
+| `src/art/posters.ts` | Pixel poster homages and flyers for the wall |
+| `src/fx/ascii3d.ts` | ASCII renders of the desk props that type in on scroll |
+| `src/fx/pixelmask.ts` | Pixel-dissolve masks (hero copy on scroll, sections on arrival) |
+| `src/fx/dust.ts` | Site-wide floating dust layer |
 | `src/ui/` | Hover/click, deskOS on the CRT, camera gallery, MPC, bookshelf |
 | `src/audio.ts` | Synthesised ambient + MPC voices (placeholder audio) |
 
 ## Interactions
 
-Hover anything that glows. Computer: zooms into the CRT and opens deskOS. Camera: flash, then a photo roll on the camera's back screen. MPC: playable pads (keys 1-4 / Q-R / A-F / Z-V). Bookshelf: favourite books. Turntable: ambient sound on/off. Lamp: lights on/off. Every object also has a keyboard-focusable button.
+Hover anything that glows. Computer: zooms into the CRT and opens deskOS. Camera: flash, then a photo roll on the camera's back screen. MPC: playable pads (keys 1-4 / Q-R / A-F / Z-V). Bookshelf: favourite books. Turntable: ambient sound on/off. Lamp: click to switch on/off, drag the head to aim the light. Every object also has a keyboard-focusable button.

@@ -25,9 +25,15 @@
     <div class="stage" id="stage">
       <canvas id="heroCanvas" class="px" role="img" aria-label="A pixel-art desk at night: a beige CRT computer, an MPC sampler, a turntable, an architect lamp, a hanging spider plant, a floating bookshelf and a wall of posters, with a teal city through the window. Objects light up when you hover them."></canvas>
     </div>
+    <div class="hero-scrim" aria-hidden="true"></div>
     <div class="hero-copy">
       <p class="eyebrow">▸ designer / developer · open for work</p>
       <h1><span data-name>Your Name</span> makes interfaces that <em>feel like places.</em></h1>
+      <p class="hero-sub">Interfaces, experiments and beats, made late at night at this desk.</p>
+      <div class="hero-ctas">
+        <a class="btn" href="#top" data-open-work>See the work ↗</a>
+        <a class="btn ghost" href="#contact">Say hello</a>
+      </div>
     </div>
     <p class="hero-hint"><span class="dot"></span>hover the desk · anything that glows is clickable</p>
     <a class="scroll-cue" href="#work">scroll <span aria-hidden="true">↓</span></a>
@@ -39,21 +45,21 @@
         <div class="sec-head">
           <p class="label">01 / work</p>
           <h2 id="work-h">Selected <em>work</em></h2>
-          <p class="lede">A few things I've designed and built. The full archive lives on the computer upstairs.</p>
+          <p class="lede">Four recent things I designed and built. The full archive lives on the computer upstairs.</p>
           <a class="btn" href="#top" data-open-work>Open the computer ↗</a>
         </div>
-        <pre class="ascii" data-ascii="cassette"></pre>
+        <figure class="fig" data-ascii3d="computer" data-cols="84" data-rows="44" data-yaw="0.4"><figcaption>fig.01 · desk-86.obj</figcaption></figure>
       </div>
       <div class="peg peg-work" id="workBoard">
         <svg class="peg-link" aria-hidden="true"></svg>
-        <div class="peg-grid" id="workCards"></div>
+        <ol class="work-list" id="workRows"></ol>
       </div>
     </section>
 
     <section class="sec about" id="about" aria-labelledby="about-h">
       <div class="about-art">
-        <pre class="ascii" data-ascii="cat"></pre>
-        <pre class="ascii" data-ascii="crt"></pre>
+        <figure class="fig" data-ascii3d="camera" data-cols="72" data-rows="34" data-yaw="-0.5" data-pitch="0.2"><figcaption>fig.02 · point-and-shoot.obj</figcaption></figure>
+        <figure class="fig" data-ascii3d="plant" data-cols="56" data-rows="46" data-pitch="0.18"><figcaption>fig.03 · rubber-plant.obj</figcaption></figure>
       </div>
       <div class="about-body">
         <p class="label">02 / about</p>
@@ -76,7 +82,7 @@
           <h2 id="services-h">What I can <em>help with</em></h2>
           <p class="lede">Most projects move across the board from left to right. Pick a column or bring the whole thing.</p>
         </div>
-        <pre class="ascii" data-ascii="plant"></pre>
+        <figure class="fig" data-ascii3d="mpc" data-cols="80" data-rows="36" data-yaw="-0.3" data-pitch="0.55"><figcaption>fig.04 · mpc-2000.obj</figcaption></figure>
       </div>
       <div class="peg peg-kanban" id="serviceBoard">
         <svg class="peg-link" aria-hidden="true"></svg>
@@ -92,8 +98,8 @@
         <ul class="socials" id="socials"></ul>
       </div>
       <div class="contact-art">
-        <pre class="ascii" data-ascii="vinyl"></pre>
-        <pre class="ascii" data-ascii="mug"></pre>
+        <figure class="fig" data-ascii3d="turntable" data-cols="84" data-rows="38" data-yaw="0.3" data-pitch="0.5"><figcaption>fig.05 · turntable.obj</figcaption></figure>
+        <figure class="fig" data-ascii3d="lamp" data-cols="60" data-rows="40" data-yaw="-0.6" data-pitch="0.15"><figcaption>fig.06 · desk-lamp.obj</figcaption></figure>
       </div>
     </section>
   </main>

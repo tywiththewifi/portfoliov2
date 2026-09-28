@@ -29,10 +29,14 @@ export function setupInteraction(hero: Hero, stage: HTMLElement, actions: Action
   for (const h of hotspots) {
     const b = document.createElement('button');
     b.className = 'sr-btn';
-    b.textContent = `${h.label}: ${h.hint}`;
+    b.textContent = h.id === 'lamp' ? 'Lamp: press Enter to switch, arrow keys to aim' : `${h.label}: ${h.hint}`;
     b.addEventListener('focus', () => { focused = h.id; });
     b.addEventListener('blur', () => { if (focused === h.id) focused = null; });
     b.addEventListener('click', () => activate(h.id));
+    if (h.id === 'lamp') b.addEventListener('keydown', (e) => {
+      const d: Record<string, [number, number]> = { ArrowLeft: [-0.03, 0], ArrowRight: [0.03, 0], ArrowUp: [0, -0.03], ArrowDown: [0, 0.03] };
+      if (d[e.key]) { e.preventDefault(); hero.aimLamp(...d[e.key]); }
+    });
     list.appendChild(b);
   }
   stage.appendChild(list);
@@ -55,8 +59,39 @@ export function setupInteraction(hero: Hero, stage: HTMLElement, actions: Action
     if (e.pointerType === 'mouse') hovered = pick(e.clientX, e.clientY);
   });
   stage.addEventListener('pointerleave', () => { hovered = null; });
-  stage.addEventListener('pointerdown', (e) => { down = { x: e.clientX, y: e.clientY, t: performance.now() }; });
+  // Dragging the lamp aims it; everything else is click-to-open.
+  let lampDrag: { x: number; y: number; moved: boolean } | null = null;
+  stage.addEventListener('pointerdown', (e) => {
+    down = { x: e.clientX, y: e.clientY, t: performance.now() };
+    if (!zoomed && !busy && pick(e.clientX, e.clientY) === 'lamp') {
+      lampDrag = { x: e.clientX, y: e.clientY, moved: false };
+      stage.setPointerCapture(e.pointerId);
+      stage.classList.add('dragging');
+      e.preventDefault();
+    }
+  });
+  stage.addEventListener('pointermove', (e) => {
+    if (!lampDrag) return;
+    const r = stage.getBoundingClientRect();
+    const dx = (e.clientX - lampDrag.x) / r.width, dy = (e.clientY - lampDrag.y) / r.height;
+    if (Math.hypot(e.clientX - down!.x, e.clientY - down!.y) > 6) lampDrag.moved = true;
+    hero.aimLamp(dx, dy);
+    lampDrag.x = e.clientX;
+    lampDrag.y = e.clientY;
+  });
+  const endDrag = (e: PointerEvent) => {
+    if (!lampDrag) return false;
+    const moved = lampDrag.moved;
+    lampDrag = null;
+    stage.classList.remove('dragging');
+    if (stage.hasPointerCapture(e.pointerId)) stage.releasePointerCapture(e.pointerId);
+    if (!moved) activate('lamp');
+    down = null;
+    return true;
+  };
+  stage.addEventListener('pointercancel', (e) => endDrag(e));
   stage.addEventListener('pointerup', (e) => {
+    if (endDrag(e)) return;
     if (!down || zoomed || busy) return;
     const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y);
     down = null;
@@ -125,7 +160,7 @@ export function setupInteraction(hero: Hero, stage: HTMLElement, actions: Action
   view.onTick(() => {
     const active = zoomed || busy ? null : focused ?? hovered;
     for (const h of hotspots) h.target = h.id === active ? 1 : 0;
-    stage.style.cursor = hovered && !zoomed ? 'pointer' : '';
+    stage.style.cursor = zoomed ? '' : hovered === 'lamp' ? 'grab' : hovered ? 'pointer' : '';
 
     if (active) {
       const h = hotspots.find((x) => x.id === active)!;

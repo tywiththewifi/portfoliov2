@@ -1,10 +1,14 @@
 import './fonts.css';
 import './styles.css';
 import { createHero } from './hero';
+import { loadWallArt } from './hero/room';
 import { setupInteraction } from './ui/interact';
 import { openBooks, openGallery, openMPC } from './ui/panels';
 import { ambientOn, shutter, startAmbient, stopAmbient } from './audio';
 import { mountSections } from './sections';
+import { mountDust } from './fx/dust';
+import { pixelReveal, setMask } from './fx/pixelmask';
+import { mountAscii3D } from './fx/ascii3d';
 
 const stage = document.getElementById('stage')!;
 const canvas = document.getElementById('heroCanvas') as HTMLCanvasElement;
@@ -20,7 +24,7 @@ function setSound(on: boolean) {
 soundBtn.addEventListener('click', () => setSound(!ambientOn()));
 
 // ---------------------------------------------------------------- hero
-const hero = createHero(canvas, stage);
+const hero = createHero(canvas, stage, await loadWallArt());
 const ui = setupInteraction(hero, stage, {
   bookshelf: openBooks,
   mpc: openMPC,
@@ -34,6 +38,23 @@ const ui = setupInteraction(hero, stage, {
 });
 
 mountSections();
+mountDust();
+void mountAscii3D([...document.querySelectorAll<HTMLElement>('[data-ascii3d]')]);
+pixelReveal([...document.querySelectorAll<HTMLElement>('main .sec-head, main .work-row, main .peg-kanban, main .about-body, main .contact-body, .foot-row')]);
+
+// Scrolling out of the hero: the room dissolves upward from the bottom edge
+// and the headline breaks up into pixels, as on the Agentic template.
+const heroEl = document.getElementById('top')!;
+const heroCopy = heroEl.querySelector<HTMLElement>('.hero-copy')!;
+const heroBits = heroEl.querySelectorAll<HTMLElement>('.hero-hint, .scroll-cue');
+const onScroll = () => {
+  const p = Math.min(1, scrollY / heroEl.offsetHeight);
+  hero.view.setScroll(p);
+  setMask(heroCopy, 1 - Math.min(1, p / 0.45));
+  heroBits.forEach((el) => setMask(el, 1 - Math.min(1, p / 0.2)));
+};
+addEventListener('scroll', onScroll, { passive: true });
+onScroll();
 
 document.querySelectorAll('[data-open-work]').forEach((el) =>
   el.addEventListener('click', (e) => {
