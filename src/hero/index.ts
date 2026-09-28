@@ -43,7 +43,7 @@ export function createHero(canvas: HTMLCanvasElement, stage: HTMLElement, art: W
   const spider = buildSpiderPlant();
   S.add(spider.group);
   // trailing pothos on top of the bookshelf, near its left end
-  const pothos = buildPothos(new THREE.Vector3(-1.3, 1.7075, -0.59), { scale: 1.2, drop: 0.36, front: 0.096, side: -0.165 });
+  const pothos = buildPothos(new THREE.Vector3(-1.14, 1.7075, -0.59), { scale: 1.2, drop: 0.36, front: 0.096, side: -0.3 });
   S.add(pothos.group);
   const camera = buildCamera(H.camera);
   S.add(camera.group);
