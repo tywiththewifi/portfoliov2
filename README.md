@@ -19,7 +19,6 @@ npm run build    # typecheck + production build to dist/
 | `src/hero/materials.ts` | Lit/emissive shaders, lamp/window/CRT lights, wind sway |
 | `src/hero/room.ts` | Walls, poster collage, window + teal city, desk, bookshelf |
 | `src/hero/props.ts` | CRT, MPC, turntable, speakers + decks, lamp, spider plant, pothos, camera |
-| `src/hero/dust.ts` | Glowing dust motes |
 | `src/art/wall/` | Your personal wall pieces (pixelated PNGs); layout in `WALL` in `room.ts` |
 | `src/art/posters.ts` | Pixel poster homages and flyers for the wall |
 | `src/art/theme.ts` | Reads the accent colour; change it once via `--accent` / `--accent-hi` in `styles.css` |

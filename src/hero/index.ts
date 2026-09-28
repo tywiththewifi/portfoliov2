@@ -6,7 +6,6 @@ import {
   buildAudioStack, buildCamera, buildComputer, buildDeskClutter, buildLamp, buildMPC,
   buildPothos, buildSpiderPlant, buildTurntable, makeScreen,
 } from './props';
-import { buildDust } from './dust';
 
 export type HotspotId = 'computer' | 'bookshelf' | 'mpc' | 'camera' | 'lamp' | 'turntable';
 
@@ -49,8 +48,6 @@ export function createHero(canvas: HTMLCanvasElement, stage: HTMLElement, art: W
   const camera = buildCamera(H.camera);
   S.add(camera.group);
   S.add(buildDeskClutter().group);
-  const dust = buildDust();
-  S.add(dust.points);
 
   const hotspots: Hotspot[] = [
     { id: 'computer', label: 'Work', hint: 'open projects', hover: H.computer, target: 0, object: computer.group, anchor: () => computer.screenCenter.clone().add(new THREE.Vector3(0, 0.21, 0)) },
@@ -61,7 +58,6 @@ export function createHero(canvas: HTMLCanvasElement, stage: HTMLElement, art: W
     { id: 'lamp', label: 'Lamp', hint: 'drag to aim · click to switch', hover: H.lamp, target: 0, object: lamp.group, anchor: () => lamp.bulb.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.16, 0)) },
   ];
 
-  const tmp = new THREE.Vector3();
   const tmpQ = new THREE.Quaternion();
   // Lamp rig: two arm joints and the shade angle (absolute, in the arm's
   // plane) are damped springs chasing targets. Dragging the arm moves the
@@ -183,13 +179,6 @@ export function createHero(canvas: HTMLCanvasElement, stage: HTMLElement, art: W
     room.books.forEach((b, i) => {
       b.position.y = b.userData.baseY + Math.max(0, Math.sin(t * 4 - i * 0.5)) ** 8 * 0.02 * H.shelf.value;
     });
-
-    // dust reacts to the cursor on a plane in front of the desk
-    const ray = new THREE.Raycaster();
-    ray.setFromCamera(new THREE.Vector2(m.x, -m.y), view.camera);
-    const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -0.2);
-    if (ray.ray.intersectPlane(plane, tmp)) dust.uniforms.uMouse.value.copy(tmp);
-    dust.uniforms.uMouseOn.value = Math.min(1, Math.hypot(m.tx, m.ty) > 0 ? 1 : 0);
   });
 
   return {
