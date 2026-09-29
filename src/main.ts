@@ -1,98 +1,67 @@
 import './fonts.css';
 import './styles.css';
-import { createHero } from './hero';
-import { loadWallArt } from './hero/room';
-import { setupInteraction } from './ui/interact';
-import { openGallery } from './ui/panels';
-import { ambientOn, shutter, startAmbient, stopAmbient } from './audio';
-import { mountSections } from './sections';
-import { mountBitmaps } from './fx/bitmap';
-import { pixelReveal, setMask } from './fx/pixelmask';
+import { mountScene } from './scene';
 
-const stage = document.getElementById('stage')!;
-const canvas = document.getElementById('heroCanvas') as HTMLCanvasElement;
-
-// ---------------------------------------------------------------- sound toggle
-const soundBtn = document.getElementById('soundToggle') as HTMLButtonElement;
-function setSound(on: boolean) {
-  if (on) startAmbient(); else stopAmbient();
-  hero.soundState.on = on;
-  soundBtn.setAttribute('aria-pressed', String(on));
-  soundBtn.querySelector('.snd-label')!.textContent = on ? 'sound on' : 'sound off';
+// ---------------------------------------------------------------- toast
+const toastEl = document.getElementById('toast')!;
+let toastTimer = 0;
+function toast(msg: string) {
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = window.setTimeout(() => toastEl.classList.remove('show'), 2400);
 }
-soundBtn.addEventListener('click', () => setSound(!ambientOn()));
 
-// ---------------------------------------------------------------- hero
-const hero = createHero(canvas, stage, await loadWallArt());
-
-// Setting switcher: three concepts for the outdoor desk. The choice lives in
-// the URL (?scene=) so each one can be linked to directly.
-type SceneId = Parameters<typeof hero.setScene>[0];
-const SCENES: SceneId[] = ['clearing', 'meadow', 'lake'];
-const switchBtns = [...document.querySelectorAll<HTMLButtonElement>('.scene-switch [data-scene]')];
-const pickScene = (id: SceneId) => {
-  hero.setScene(id);
-  switchBtns.forEach((b) => b.setAttribute('aria-checked', String(b.dataset.scene === id)));
-  const u = new URL(location.href);
-  u.searchParams.set('scene', id);
-  history.replaceState(null, '', u);
-};
-switchBtns.forEach((b) => b.addEventListener('click', () => pickScene(b.dataset.scene as SceneId)));
-const fromUrl = new URLSearchParams(location.search).get('scene') as SceneId | null;
-pickScene(fromUrl && SCENES.includes(fromUrl) ? fromUrl : 'clearing');
-
-// Render style: pixel art, or the same scene as a full-res poly render (?style=)
-type Style = 'pixel' | 'poly';
-const styleBtns = [...document.querySelectorAll<HTMLButtonElement>('.scene-switch [data-style]')];
-const pickStyle = (s: Style) => {
-  hero.setStyle(s);
-  styleBtns.forEach((b) => b.setAttribute('aria-checked', String(b.dataset.style === s)));
-  const u = new URL(location.href);
-  u.searchParams.set('style', s);
-  history.replaceState(null, '', u);
-};
-styleBtns.forEach((b) => b.addEventListener('click', () => pickStyle(b.dataset.style as Style)));
-pickStyle(new URLSearchParams(location.search).get('style') === 'poly' ? 'poly' : 'pixel');
-const ui = setupInteraction(hero, stage, {
-  camera: () => {
-    hero.flash();
-    shutter();
-    setTimeout(openGallery, 380);
-  },
-  lamp: () => hero.toggleLamp(),
+// ---------------------------------------------------------------- clock
+// Tyler's local time, as "TUE 15:50 PDT", in the zone set on the element.
+const clock = document.querySelector<HTMLTimeElement>('[data-clock]')!;
+const fmt = new Intl.DateTimeFormat('en-US', {
+  timeZone: clock.dataset.tz || undefined,
+  weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZoneName: 'short',
 });
+function tick() {
+  const now = new Date();
+  const p = Object.fromEntries(fmt.formatToParts(now).map((x) => [x.type, x.value]));
+  clock.textContent = `${p.weekday} ${p.hour}:${p.minute} ${p.timeZoneName ?? ''}`.trim().toUpperCase();
+  clock.dateTime = now.toISOString();
+  // next update on the minute
+  setTimeout(tick, 60_000 - (now.getTime() % 60_000) + 50);
+}
+tick();
 
-mountSections();
-mountBitmaps([...document.querySelectorAll<HTMLElement>('[data-bitmap]')]);
-pixelReveal([...document.querySelectorAll<HTMLElement>('main .sec-head, main .bitmap, main .work-row, main .peg-kanban, main .about-body, main .contact-body, .foot-row')]);
+// ---------------------------------------------------------------- day / night
+// Night is the only mode for now; day mode (websites by day) comes later.
+document.querySelector('[data-mode="day"]')!.addEventListener('click', () => toast('Day mode is on its way: websites by day, music by night.'));
 
-// Scrolling out of the hero: the room dissolves upward from the bottom edge
-// and the headline breaks up into pixels, as on the Agentic template.
-const heroEl = document.getElementById('top')!;
-const heroCopy = heroEl.querySelector<HTMLElement>('.hero-copy')!;
-const heroBits = heroEl.querySelectorAll<HTMLElement>('.hero-hint, .scroll-cue, .scene-switch');
-const onScroll = () => {
-  const p = Math.min(1, scrollY / heroEl.offsetHeight);
-  hero.view.setScroll(p);
-  setMask(heroCopy, 1 - Math.min(1, p / 0.45));
-  heroBits.forEach((el) => setMask(el, 1 - Math.min(1, p / 0.2)));
-};
-addEventListener('scroll', onScroll, { passive: true });
-onScroll();
-
-document.querySelectorAll('[data-open-work]').forEach((el) =>
-  el.addEventListener('click', (e) => {
+// ---------------------------------------------------------------- pills
+const email = document.querySelector<HTMLButtonElement>('[data-email]')!;
+email.addEventListener('click', async () => {
+  const address = email.dataset.email?.trim();
+  if (!address) return toast('Email address coming soon.');
+  try {
+    await navigator.clipboard.writeText(address);
+    toast(`Copied ${address}`);
+  } catch {
+    location.href = `mailto:${address}`;
+  }
+});
+document.querySelectorAll<HTMLAnchorElement>('a.pill').forEach((a) =>
+  a.addEventListener('click', (e) => {
+    if (a.getAttribute('href') !== '#') return;
     e.preventDefault();
-    ui.openComputer();
+    toast(`${a.dataset.name ?? 'This'} link coming soon.`);
   }),
 );
 
-// Only render while the hero is on screen and the tab is visible.
-let heroVisible = true;
-const sync = () => (heroVisible && !document.hidden ? hero.view.start() : hero.view.stop());
-new IntersectionObserver(([e]) => { heroVisible = e.isIntersecting; sync(); }, { rootMargin: '60px' }).observe(stage);
-document.addEventListener('visibilitychange', sync);
-sync();
-
-(window as unknown as { __hero: unknown }).__hero = hero;
-document.body.dataset.ready = '1';
+// ---------------------------------------------------------------- scene
+// Wait (briefly) for the NB faces so the text drawn into the scene's
+// textures (the CRT log, badges, the tape labels) uses them.
+const canvas = document.getElementById('scene') as HTMLCanvasElement;
+const hero = document.getElementById('top')!;
+const copy = document.getElementById('copy')!;
+const fontsIn = Promise.all([
+  document.fonts.load('20px "NB International Pro Mono"'),
+  document.fonts.load('20px "NB International Pro"'),
+]);
+await Promise.race([fontsIn, new Promise((r) => setTimeout(r, 1500))]).catch(() => {});
+if (!mountScene(canvas, hero, copy)) canvas.hidden = true;

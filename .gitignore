@@ -2,3 +2,7 @@ node_modules
 dist
 .DS_Store
 *.local
+
+# Licensed NB International Pro webfonts, kept out of this public repo.
+# Copy them into public/fonts/ locally (see the README).
+public/fonts/*.woff2

@@ -1,10 +1,6 @@
-/* Self-hosted, latin subsets. Chakra Petch (OFL) for headings, Departure Mono
-   (OFL, Helena Zhang) for UI/mono, Silkscreen for tiny labels, Inter for body. */
-@font-face { font-family: 'Chakra Petch'; font-style: normal; font-weight: 500; font-display: swap; src: url(./fonts/ChakraPetch-500.woff2) format('woff2'); }
-@font-face { font-family: 'Chakra Petch'; font-style: normal; font-weight: 600; font-display: swap; src: url(./fonts/ChakraPetch-600.woff2) format('woff2'); }
-@font-face { font-family: 'Departure Mono'; font-style: normal; font-weight: 400; font-display: swap; src: url(./fonts/DepartureMono.woff2) format('woff2'); }
-@font-face { font-family: 'Silkscreen'; font-style: normal; font-weight: 400; font-display: swap; src: url(./fonts/Silkscreen-400-normal.woff2) format('woff2'); }
-@font-face { font-family: 'Inter'; font-style: normal; font-weight: 400; font-display: swap; src: url(./fonts/Inter-400-normal.woff2) format('woff2'); }
-@font-face { font-family: 'Inter'; font-style: normal; font-weight: 500; font-display: swap; src: url(./fonts/Inter-500-normal.woff2) format('woff2'); }
-@font-face { font-family: 'Inter'; font-style: normal; font-weight: 600; font-display: swap; src: url(./fonts/Inter-600-normal.woff2) format('woff2'); }
-@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 400; font-display: swap; src: url(./fonts/JetBrainsMono-400-normal.woff2) format('woff2'); }
+/* NB International Pro (licensed). The WOFF2 files live in public/fonts/ and
+   are kept out of git (see .gitignore and the README); without them the page
+   falls back to Helvetica/Arial and the system monospace. */
+@font-face { font-family: 'NB International Pro'; font-style: normal; font-weight: 400; font-display: swap; src: url(/fonts/nbinternationalpro-regular.woff2) format('woff2'); }
+@font-face { font-family: 'NB International Pro'; font-style: normal; font-weight: 500; font-display: swap; src: url(/fonts/nbinternationalpro-medium.woff2) format('woff2'); }
+@font-face { font-family: 'NB International Pro Mono'; font-style: normal; font-weight: 400; font-display: swap; src: url(/fonts/nbinternationalpro-mono.woff2) format('woff2'); }
