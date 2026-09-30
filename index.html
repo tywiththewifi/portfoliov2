@@ -6,9 +6,18 @@
   <title>Tyler Caldwell — Web Developer</title>
   <meta name="description" content="Tyler Caldwell is a web developer building immersive experiences that convert." />
   <meta name="theme-color" content="#0a0a0a" />
-  <meta name="color-scheme" content="dark" />
+  <meta name="color-scheme" content="dark light" />
   <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
   <link rel="preload" href="/fonts/nbinternationalpro-regular.woff2" as="font" type="font/woff2" crossorigin />
+  <script>
+    // Day or night, as the visitor last chose, set before the first paint.
+    try {
+      if (localStorage.getItem('tc-mode') === 'day') {
+        document.documentElement.dataset.mode = 'day';
+        document.querySelector('meta[name="theme-color"]').content = '#fafafa';
+      }
+    } catch (e) {}
+  </script>
 </head>
 <body>
   <!--

@@ -1,6 +1,6 @@
 import './fonts.css';
 import './styles.css';
-import { mountScene } from './scene';
+import { mountScene, type Mode } from './scene';
 
 // ---------------------------------------------------------------- toast
 const toastEl = document.getElementById('toast')!;
@@ -30,8 +30,24 @@ function tick() {
 tick();
 
 // ---------------------------------------------------------------- day / night
-// Night is the only mode for now; day mode (websites by day) comes later.
-document.querySelector('[data-mode="day"]')!.addEventListener('click', () => toast('Day mode is on its way: websites by day, music by night.'));
+// Websites by day, music by night. Night is the default; the visitor's
+// choice is remembered (a small script in index.html applies it before the
+// first paint).
+const root = document.documentElement;
+const modeButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-mode]')];
+const themeColor = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+let mode: Mode = root.dataset.mode === 'day' ? 'day' : 'night';
+let setSceneMode: (m: Mode) => void = () => {};
+function applyMode(next: Mode, remember: boolean) {
+  mode = next;
+  if (next === 'day') root.dataset.mode = 'day'; else delete root.dataset.mode;
+  if (themeColor) themeColor.content = next === 'day' ? '#fafafa' : '#0a0a0a';
+  modeButtons.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === next)));
+  setSceneMode(next);
+  if (remember) try { localStorage.setItem('tc-mode', next); } catch { /* storage blocked: the choice lasts this visit */ }
+}
+modeButtons.forEach((b) => b.addEventListener('click', () => applyMode(b.dataset.mode as Mode, true)));
+applyMode(mode, false);
 
 // ---------------------------------------------------------------- pills
 // Email pills (hero and footer) copy the address in their data-email.
@@ -68,4 +84,6 @@ const fontsIn = Promise.all([
   document.fonts.load('20px "NB International Pro"'),
 ]);
 await Promise.race([fontsIn, new Promise((r) => setTimeout(r, 1500))]).catch(() => {});
-if (!mountScene(canvas, hero, copy)) canvas.hidden = true;
+const scene = mountScene(canvas, hero, copy, mode);
+if (scene) setSceneMode = (m) => scene.setMode(m);
+else canvas.hidden = true;

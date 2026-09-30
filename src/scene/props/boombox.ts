@@ -127,18 +127,22 @@ export function buildBoombox() {
     }
   }
 
-  // Play: t and dt in seconds.
+  // t and dt in seconds. Stopped (by day), the reels stand still and the
+  // meters fall away to nothing.
   let wound = 0.35; // share of tape on the take-up (right) reel
   let level = [0, 0, 0, 0];
-  const update = (t: number, dt: number) => {
-    wound = (wound + dt * 0.004) % 1;
-    tape.wind(wound, dt);
+  const update = (t: number, dt: number, playing = true) => {
+    if (playing) {
+      wound = (wound + dt * 0.004) % 1;
+      tape.wind(wound, dt);
+    }
     // a lazy, loping level: two beats of pulse over slow noise
     const beat = Math.pow(Math.max(0, Math.sin(t * Math.PI * 1.55)), 6);
     level = level.map((l, i) => {
       const n = 0.5 + 0.25 * Math.sin(t * (2.3 + i * 0.4) + i) + 0.15 * Math.sin(t * (5.1 + i) + i * 2);
-      const target = Math.min(1, n * 0.7 + beat * 0.45);
-      return target > l ? target : l - dt * 1.6; // fast attack, slow fall
+      const target = playing ? Math.min(1, n * 0.7 + beat * 0.45) : 0;
+      if (!dt) return target; // a still frame shows the level as it is
+      return target > l ? target : Math.max(0, l - dt * 1.6); // fast attack, slow fall
     });
     meters.forEach((row, r) => row.forEach((m, i) => setGlow(m, (i + 0.5) / 8 < level[r] ? 1 : 0.08)));
   };

@@ -1,4 +1,16 @@
-/* Tokens after pacomepertant.com: near-black ground, one mint accent. */
+/* Tokens after pacomepertant.com: near-black ground, one mint accent.
+   Night is the default; day (data-mode="day" on <html>) is the same system
+   inverted, with a deeper mint (--accent) wherever the accent is text or a
+   thin line. The colour tokens are registered so they can be animated, which
+   lets the whole page ease between the two modes. */
+@property --bg { syntax: '<color>'; inherits: true; initial-value: #0a0a0a; }
+@property --panel { syntax: '<color>'; inherits: true; initial-value: #171717; }
+@property --text { syntax: '<color>'; inherits: true; initial-value: #fafafa; }
+@property --text-2 { syntax: '<color>'; inherits: true; initial-value: #e6e6e6; }
+@property --muted { syntax: '<color>'; inherits: true; initial-value: #9a9a9a; }
+@property --line { syntax: '<color>'; inherits: true; initial-value: rgba(250, 250, 250, 0.1); }
+@property --accent { syntax: '<color>'; inherits: true; initial-value: #21ffc0; }
+@property --shadow { syntax: '<color>'; inherits: true; initial-value: rgba(0, 0, 0, 0.45); }
 :root {
   color-scheme: dark;
   --bg: #0a0a0a;
@@ -8,10 +20,24 @@
   --muted: #9a9a9a;
   --line: rgba(250, 250, 250, 0.1);
   --mint: #21ffc0;
+  --accent: #21ffc0;
+  --shadow: rgba(0, 0, 0, 0.45);
   --sans: 'NB International Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   --mono: 'NB International Pro Mono', ui-monospace, Menlo, Consolas, monospace;
   --gutter: clamp(16px, 5vw, 76px);
   --head-h: 90px; /* header's top padding plus the mark */
+  transition: --bg 0.7s ease, --panel 0.7s ease, --text 0.7s ease, --text-2 0.7s ease, --muted 0.7s ease, --line 0.7s ease, --accent 0.7s ease, --shadow 0.7s ease;
+}
+:root[data-mode='day'] {
+  color-scheme: light;
+  --bg: #fafafa;
+  --panel: #ececec;
+  --text: #0a0a0a;
+  --text-2: #171717;
+  --muted: #666666;
+  --line: rgba(10, 10, 10, 0.1);
+  --accent: #00a37a;
+  --shadow: rgba(0, 0, 0, 0.14);
 }
 
 * { box-sizing: border-box; }
@@ -26,8 +52,8 @@ body {
 p, h1, h2 { margin: 0; }
 a { color: inherit; }
 button { font: inherit; color: inherit; }
-:focus-visible { outline: 2px solid var(--mint); outline-offset: 3px; }
-::selection { background: var(--mint); color: var(--bg); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+::selection { background: var(--mint); color: #0a0a0a; }
 .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
@@ -83,7 +109,7 @@ button { font: inherit; color: inherit; }
   letter-spacing: -0.04em;
   text-decoration: none;
 }
-.mark span { color: var(--mint); }
+.mark span { color: var(--accent); }
 .who { display: grid; gap: 2px; margin-right: auto; min-width: 0; }
 .who-name { font-size: 18px; letter-spacing: -0.01em; }
 .who-role { font-size: 16px; color: var(--muted); }
@@ -219,7 +245,7 @@ h1 {
 .w90 { --w: 90%; } .w80 { --w: 80%; } .w70 { --w: 70%; } .w60 { --w: 60%; } .w120 { --w: 120%; }
 
 /* screenshots: shadows follow each frame's corner radius */
-.shot { box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45); }
+.shot { box-shadow: 0 24px 60px var(--shadow); }
 .shot.browser { border-radius: 0.9% / 1.44%; }
 .shot.phone { border-radius: 11.3% / 5.2%; }
 .shot.card { border-radius: 16px; }

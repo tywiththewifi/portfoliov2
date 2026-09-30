@@ -40,8 +40,9 @@ Without them the page falls back to Helvetica/Arial and the system monospace.
 | `src/styles.css` | Tokens (`--bg`, `--panel`, `--text`, `--text-2`, `--muted`, `--mint`) and the layout |
 | `src/main.ts` | Clock, day/night buttons, email copy, toasts, mounting the scene |
 | `src/scene/index.ts` | Renderer, lights, camera drift and parallax, framing (view offset), render loop |
-| `src/scene/grid.ts` | The floor-grid shader |
-| `src/scene/screen.ts` | The CRT's typing dev log |
+| `src/scene/grid.ts` | The floor-grid shader, with the rings that pulse out from the desk |
+| `src/scene/screen.ts` | The CRT's typing dev log (night) |
+| `src/scene/mockups.ts` | The CRT's website mockups (day) |
 | `src/scene/set.ts` | Where each prop sits on the desk, and the cables |
 | `src/scene/props/` | The models: desk, CRT, tower, keyboard and mouse, boombox, mug and cassette case, chair |
 | `src/scene/kit.ts` | Parts builder the models are made with (merged meshes, baked contact shading) |
@@ -73,11 +74,24 @@ scene appears.
   little pointer parallax. With `prefers-reduced-motion` the scene is a still
   frame and the CRT shows the whole log.
 - Rendering stops while the hero is off screen or the tab is hidden.
+- Rings of mint light pulse out across the floor grid from the desk, in
+  both modes; they hold still with reduced motion.
+
+## Day and night
+
+The sun and moon buttons switch the whole page. Night (the default) is the
+black void: mint rim light and CRT glow, the dev log typing, the boombox
+playing. Day is a white void in daylight: the CRT cycles through website
+mockups (a cursor selects an element, design-tool style, then the page
+scrolls on to the next), and the boombox stops. The page colours and the
+scene blend between the two over most of a second. The visitor's choice is
+kept in `localStorage` and applied before the first paint by a small script
+in `index.html`. Night and day colours for the page are the tokens in
+`src/styles.css`; for the scene, `LOOKS` in `src/scene/index.ts`.
 
 ## Still to come
 
 - The X-ray ASCII lens (drawn in NB Mono)
-- Day mode: websites by day, music by night
 - Real email, LinkedIn and resume links, the final bio, and the real projects and screenshots
 
 The previous pixel-art desk (`src/hero`, `src/ui`, `src/art`, `src/fx`,
