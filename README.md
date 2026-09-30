@@ -1,6 +1,7 @@
 # portfoliov2
 
-Tyler Caldwell's portfolio. The hero is a Three.js scene filling the whole
+Tyler Caldwell's portfolio: a 3D hero, then case studies and side projects
+in the layout of Daru Sim's site. The hero is a Three.js scene filling the whole
 first screen behind the text: a desk standing in a black void on a floor
 grid, with a beige CRT typing a dev log, a tower PC, a keyboard and mouse, a
 cassette boombox with its reels turning, a mug, a cassette case and an office
@@ -34,7 +35,8 @@ Without them the page falls back to Helvetica/Arial and the system monospace.
 
 | Path | What |
 | --- | --- |
-| `index.html` | All the copy: heading, bio (placeholder), pills. The email address goes in `data-email`, the LinkedIn and resume links in the pills' `href` (`#` shows "coming soon"), the clock's time zone in `data-tz` |
+| `index.html` | All the copy: hero, the four case studies, freelance and side projects, and the footer (all placeholder). The email address goes in `data-email` on both Email pills, the LinkedIn and resume links in the pills' `href` (`#` shows "coming soon"), the clock's time zone in `data-tz` |
+| `public/work/placeholders/` | Placeholder screenshots, each labelled with the size the real image should be. Put real images in `public/work/` and point the `<img>` at them |
 | `src/styles.css` | Tokens (`--bg`, `--panel`, `--text`, `--text-2`, `--muted`, `--mint`) and the layout |
 | `src/main.ts` | Clock, day/night buttons, email copy, toasts, mounting the scene |
 | `src/scene/index.ts` | Renderer, lights, camera drift and parallax, framing (view offset), render loop |
@@ -44,6 +46,19 @@ Without them the page falls back to Helvetica/Arial and the system monospace.
 | `src/scene/props/` | The models: desk, CRT, tower, keyboard and mouse, boombox, mug and cassette case, chair |
 | `src/scene/kit.ts` | Parts builder the models are made with (merged meshes, baked contact shading) |
 | `src/scene/mats.ts` | Scene colours, materials, printed labels |
+
+## Work sections
+
+After the hero, the page follows Daru Sim's layout: each case study has a
+title, a short paragraph and the role and years, then a gallery of rounded
+panels in rows. Rows are full width, `c21` (two thirds and a third), `c12`
+or `c11` (halves). A panel pads its screenshot by default; `bleed-b` and
+`bleed-r` let it run off the bottom or right edge; `clip` gives the panel a
+fixed shape and crops what runs past the bottom. `w60`–`w90` set how wide
+the screenshot sits. Phone screens go in a `.phones` group (`n2`, `n4`,
+`n5`, optional `stagger`). Real screenshots don't need the placeholders'
+frames: a browser window at 1600 × 1000, phone screens at 390 × 844 (or
+2x), and crops at the sizes printed on the placeholders.
 
 The models are built in code from bevelled primitives, lathes and extrusions
 rather than loaded from files, so there is nothing to download before the
@@ -63,7 +78,7 @@ scene appears.
 
 - The X-ray ASCII lens (drawn in NB Mono)
 - Day mode: websites by day, music by night
-- Real email, LinkedIn and resume links, and the final bio
+- Real email, LinkedIn and resume links, the final bio, and the real projects and screenshots
 
 The previous pixel-art desk (`src/hero`, `src/ui`, `src/art`, `src/fx`,
 `src/audio.ts`, `src/sections.ts`, `src/content`, `src/fonts`) is no longer

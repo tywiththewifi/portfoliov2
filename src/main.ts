@@ -34,17 +34,19 @@ tick();
 document.querySelector('[data-mode="day"]')!.addEventListener('click', () => toast('Day mode is on its way: websites by day, music by night.'));
 
 // ---------------------------------------------------------------- pills
-const email = document.querySelector<HTMLButtonElement>('[data-email]')!;
-email.addEventListener('click', async () => {
-  const address = email.dataset.email?.trim();
-  if (!address) return toast('Email address coming soon.');
-  try {
-    await navigator.clipboard.writeText(address);
-    toast(`Copied ${address}`);
-  } catch {
-    location.href = `mailto:${address}`;
-  }
-});
+// Email pills (hero and footer) copy the address in their data-email.
+document.querySelectorAll<HTMLButtonElement>('[data-email]').forEach((btn) =>
+  btn.addEventListener('click', async () => {
+    const address = btn.dataset.email?.trim();
+    if (!address) return toast('Email address coming soon.');
+    try {
+      await navigator.clipboard.writeText(address);
+      toast(`Copied ${address}`);
+    } catch {
+      location.href = `mailto:${address}`;
+    }
+  }),
+);
 document.querySelectorAll<HTMLAnchorElement>('a.pill').forEach((a) =>
   a.addEventListener('click', (e) => {
     if (a.getAttribute('href') !== '#') return;
@@ -52,6 +54,8 @@ document.querySelectorAll<HTMLAnchorElement>('a.pill').forEach((a) =>
     toast(`${a.dataset.name ?? 'This'} link coming soon.`);
   }),
 );
+
+document.querySelectorAll('[data-year]').forEach((el) => (el.textContent = String(new Date().getFullYear())));
 
 // ---------------------------------------------------------------- scene
 // Wait (briefly) for the NB faces so the text drawn into the scene's

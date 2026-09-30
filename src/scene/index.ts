@@ -76,7 +76,7 @@ export function mountScene(canvas: HTMLCanvasElement, hero: HTMLElement, copy: H
   // into the free part of the hero: right of the copy on wide screens,
   // below it on narrow ones. The fit sets the FOV (size) and a view offset
   // (position), so the camera itself never moves off its orbit.
-  const head = hero.querySelector('.head');
+  const head = document.querySelector('.head');
   const b = set.bounds;
   const corners = Array.from({ length: 8 }, (_, i) => new THREE.Vector3(
     i & 1 ? b.max.x : b.min.x, i & 2 ? b.max.y : b.min.y, i & 4 ? b.max.z : b.min.z));

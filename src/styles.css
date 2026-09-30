@@ -11,6 +11,7 @@
   --sans: 'NB International Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   --mono: 'NB International Pro Mono', ui-monospace, Menlo, Consolas, monospace;
   --gutter: clamp(16px, 5vw, 76px);
+  --head-h: 90px; /* header's top padding plus the mark */
 }
 
 * { box-sizing: border-box; }
@@ -22,24 +23,27 @@ body {
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
 }
-p, h1 { margin: 0; }
+p, h1, h2 { margin: 0; }
 a { color: inherit; }
 button { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--mint); outline-offset: 3px; }
 ::selection { background: var(--mint); color: var(--bg); }
 .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+
 /* ---------------------------------------------------------------- hero */
-/* The 3D canvas fills the whole hero, header included, behind the text.
-   Its top and bottom edges fade into the page. */
+/* The header sits over the top of the hero, so the 3D canvas fills the
+   whole first screen, header included, behind the text. Its top and bottom
+   edges fade into the page. */
 .hero {
   position: relative;
   isolation: isolate;
   min-height: 100vh;
   min-height: 100svh;
   display: flex;
-  flex-direction: column;
-  padding: 34px var(--gutter) clamp(40px, 6vw, 88px);
+  align-items: center;
+  padding: calc(var(--head-h) + clamp(56px, 9vw, 132px)) var(--gutter) clamp(40px, 6vw, 88px);
   overflow: hidden;
 }
 .scene {
@@ -56,7 +60,15 @@ button { font: inherit; color: inherit; }
 
 /* header, as on Daru Sim's site: mark, name and role, then the clock and
    the day/night switch on the right */
-.head { display: flex; align-items: center; gap: 16px; }
+.head {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 34px var(--gutter) 0;
+}
 .mark {
   flex: none;
   width: 56px;
@@ -103,7 +115,6 @@ button { font: inherit; color: inherit; }
 .modes svg { width: 20px; height: 20px; }
 
 /* copy: a medium heading, three grey paragraphs, pill links; no eyebrow */
-.main { flex: 1; display: flex; align-items: center; padding-block: clamp(56px, 9vw, 132px) 0; }
 .copy { width: 100%; max-width: min(640px, 47vw); }
 h1 {
   margin-bottom: 18px;
@@ -144,15 +155,115 @@ h1 {
    the room left by the bottom padding. */
 @media (max-width: 979px) {
   .copy { max-width: 640px; }
-  .main { align-items: flex-start; padding-top: clamp(48px, 12vw, 96px); }
-  .hero { padding-bottom: min(96vw, 600px); }
+  .hero { align-items: flex-start; padding-top: calc(var(--head-h) + clamp(48px, 12vw, 96px)); padding-bottom: min(96vw, 600px); }
 }
 @media (max-width: 560px) {
+  :root { --head-h: 82px; }
   .clock { display: none; }
   .mark { width: 48px; height: 48px; font-size: 16px; }
   .who-name { font-size: 16px; }
   .who-role { font-size: 14px; }
 }
+
+/* ---------------------------------------------------------------- work */
+/* Case studies, as on Daru Sim's site: a title and a short grey paragraph
+   with the role and years on the right, then a gallery of rounded panels in
+   rows (full width, two thirds and a third, or halves). Screens sit inside
+   the panels with padding, or run off an edge (bleed-b, bleed-r). */
+.work { display: grid; gap: clamp(112px, 13vw, 200px); padding: clamp(64px, 8vw, 120px) var(--gutter) 0; }
+.case { display: grid; gap: clamp(28px, 3.4vw, 44px); min-width: 0; }
+.case-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 48px; }
+.case-intro { display: grid; gap: 12px; max-width: 640px; min-width: 0; }
+.case h2, .foot h2 {
+  font-weight: 400;
+  font-size: clamp(22px, 1.9vw, 27px);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.case-intro p, .foot-cta p { max-width: 60ch; font-size: clamp(16px, 1.3vw, 18px); line-height: 1.6; color: var(--muted); }
+.case-meta, .tile-year, .foot-bar {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.gallery, .row { display: grid; gap: 10px; }
+.row.c21 { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+.row.c12 { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }
+.row.c11 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.panel {
+  --pad: clamp(20px, 5.5%, 72px);
+  position: relative;
+  min-width: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--pad);
+  border-radius: 16px;
+  background: var(--panel);
+  overflow: hidden;
+}
+.panel img { display: block; height: auto; max-width: 100%; }
+.panel > img, .panel > .phones { width: var(--w, 100%); }
+.panel.bleed-b { padding-bottom: 0; align-items: flex-end; }
+.panel.bleed-r { padding-right: 0; justify-content: flex-start; }
+.panel.bleed-r > img { max-width: none; width: var(--w, 115%); }
+/* a fixed-shape panel that clips what runs past its bottom edge */
+.panel.clip { aspect-ratio: var(--ar, 16 / 7); align-items: flex-start; padding-bottom: 0; }
+.ar-1 { --ar: 1 / 1; }
+.w90 { --w: 90%; } .w80 { --w: 80%; } .w70 { --w: 70%; } .w60 { --w: 60%; } .w120 { --w: 120%; }
+
+/* screenshots: shadows follow each frame's corner radius */
+.shot { box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45); }
+.shot.browser { border-radius: 0.9% / 1.44%; }
+.shot.phone { border-radius: 11.3% / 5.2%; }
+.shot.card { border-radius: 16px; }
+
+/* a row of phone screens; .stagger drops every other one a little */
+.phones { --n: 3; --g: clamp(10px, 2.4vw, 32px); display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: var(--g); }
+.phones > img { flex: 0 0 calc((100% - (var(--n) - 1) * var(--g)) / var(--n)); min-width: 0; }
+.phones.n2 { --n: 2; } .phones.n4 { --n: 4; } .phones.n5 { --n: 5; }
+.phones.stagger > :nth-child(even) { margin-top: 12%; }
+
+/* freelance and side projects: smaller tiles with a caption */
+.tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px 10px; }
+.tile { display: grid; gap: 16px; align-content: start; margin: 0; min-width: 0; }
+.tile .panel { aspect-ratio: 4 / 3; }
+.tile .panel.bleed { padding: 9% 0 0 9%; align-items: flex-start; justify-content: flex-start; }
+.tile .panel.bleed > img { max-width: none; width: 125%; }
+.tile figcaption { display: grid; gap: 4px; }
+.tile-name { font-size: 17px; }
+.tile-desc { font-size: 15px; line-height: 1.5; color: var(--muted); }
+.tile-year { margin-top: 4px; }
+
+@media (max-width: 979px) {
+  .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .row.c21, .row.c12, .row.c11 { grid-template-columns: minmax(0, 1fr); }
+  .panel { border-radius: 12px; }
+  .phones.n4 { --n: 2; }
+  .phones.n5 { --n: 3; }
+  .phones.n5 > :nth-child(n + 4) { display: none; }
+  .panel.clip { aspect-ratio: 4 / 3; }
+}
+@media (max-width: 560px) {
+  .tiles { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ---------------------------------------------------------------- footer */
+.foot { display: grid; gap: clamp(80px, 10vw, 140px); padding: clamp(120px, 14vw, 200px) var(--gutter) 36px; }
+.foot-cta { display: grid; gap: 12px; max-width: 640px; }
+.foot .pills { margin-top: 28px; }
+.foot-bar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 24px; padding-top: 20px; border-top: 1px solid var(--line); }
+.foot-bar p { margin: 0; }
+.foot-bar a { text-decoration: none; }
+.foot-bar a:hover { color: var(--text); }
 
 /* ---------------------------------------------------------------- toast */
 .toast {
