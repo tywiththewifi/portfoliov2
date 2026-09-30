@@ -28,12 +28,12 @@ const LOOKS = {
   night: {
     sky: col('#e4e4e4'), ground: col('#141414'), hemi: 1.5, key: col('#ffeedd'), keyI: 3.2,
     rim: col(MINT), rimI: 0.28, glow: col(MINT), glowI: 0.35, shadow: 0.6,
-    minor: col('#3a3a3a'), major: col('#565656'), mint: col(MINT), minorA: 0.5, majorA: 0.75, axisA: 0.55,
+    minor: col('#3a3a3a'), major: col('#565656'), mint: col(MINT), ring: col(MINT), ringA: 1, minorA: 0.5, majorA: 0.75, axisA: 0.55,
   },
   day: {
     sky: col('#ffffff'), ground: col('#d4d4d4'), hemi: 2.1, key: col('#fff8ee'), keyI: 3.4,
     rim: col('#ffffff'), rimI: 0.45, glow: col('#e6fff7'), glowI: 0.1, shadow: 0.3,
-    minor: col('#8c8c8c'), major: col('#6e6e6e'), mint: col('#00b386'), minorA: 0.22, majorA: 0.36, axisA: 0.5,
+    minor: col('#8c8c8c'), major: col('#6e6e6e'), mint: col('#00b386'), ring: col('#b2b2b2'), ringA: 1.9, minorA: 0.22, majorA: 0.36, axisA: 0.5,
   },
 };
 
@@ -116,6 +116,8 @@ export function mountScene(canvas: HTMLCanvasElement, hero: HTMLElement, copy: H
     u.uMinor.value.lerpColors(n.minor, d.minor, k);
     u.uMajorCol.value.lerpColors(n.major, d.major, k);
     u.uMint.value.lerpColors(n.mint, d.mint, k);
+    u.uRing.value.lerpColors(n.ring, d.ring, k);
+    u.uRingA.value = l(n.ringA, d.ringA);
     u.uMinorA.value = l(n.minorA, d.minorA);
     u.uMajorA.value = l(n.majorA, d.majorA);
     u.uAxisA.value = l(n.axisA, d.axisA);

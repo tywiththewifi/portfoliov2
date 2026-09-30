@@ -6,8 +6,8 @@ import { MINT } from './mats';
 // four, antialiased with screen-space derivatives; lines fade out between
 // `near` and `far` units from the origin so the grid resolves out of the
 // void around the desk; the two centre axes are a faint mint. Rings of light
-// pulse outward from the desk (the origin) along the lines, two at a time,
-// fading out as they spread. Colours and strengths are uniforms so day and night
+// (mint by night, light grey by day) pulse outward from the desk (the
+// origin) along the lines, two at a time, fading out as they spread. Colours and strengths are uniforms so day and night
 // can blend between them.
 export function floorGrid(o: { cell?: number; major?: number; near?: number; far?: number } = {}) {
   const mat = new THREE.ShaderMaterial({
@@ -21,6 +21,8 @@ export function floorGrid(o: { cell?: number; major?: number; near?: number; far
       uMinor: { value: new THREE.Color('#3a3a3a') },
       uMajorCol: { value: new THREE.Color('#565656') },
       uMint: { value: new THREE.Color(MINT) },
+      uRing: { value: new THREE.Color(MINT) },
+      uRingA: { value: 1 },
       uMinorA: { value: 0.5 },
       uMajorA: { value: 0.75 },
       uAxisA: { value: 0.55 },
@@ -39,8 +41,8 @@ export function floorGrid(o: { cell?: number; major?: number; near?: number; far
       }`,
     fragmentShader: /* glsl */ `
       uniform float uCell, uMajor, uNear, uFar, uMinorA, uMajorA, uAxisA;
-      uniform float uTime, uPulse, uPeriod, uReach;
-      uniform vec3 uMinor, uMajorCol, uMint;
+      uniform float uTime, uPulse, uPeriod, uReach, uRingA;
+      uniform vec3 uMinor, uMajorCol, uMint, uRing;
       varying vec3 vW;
       // 1 on a line one pixel wide, 0 off it
       float lines(vec2 p, float s) {
@@ -72,9 +74,10 @@ export function floorGrid(o: { cell?: number; major?: number; near?: number; far
         float line = max(minor * crowd * 0.7, major);
 
         vec3 col = mix(uMinor, uMajorCol, major);
-        col = mix(col, uMint, clamp(axis * 0.8 + ring * 0.85, 0.0, 1.0));
+        col = mix(col, uMint, axis * 0.8);
+        col = mix(col, uRing, clamp(ring * 0.85, 0.0, 1.0));
         float a = max(max(minor * uMinorA * crowd, major * uMajorA), axis * uAxisA);
-        a += ring * (line * 0.45 + 0.02);
+        a += ring * (line * 0.45 + 0.02) * uRingA;
         gl_FragColor = vec4(col, min(a, 1.0) * fade);
         #include <colorspace_fragment>
       }`,
