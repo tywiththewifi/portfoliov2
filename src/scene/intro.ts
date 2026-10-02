@@ -196,6 +196,7 @@ export function mountIntro(root: THREE.Object3D, bounds: THREE.Box3, fillAxis: T
   const step = (1 - RISE) / Math.max(1, parts.length - 1);
   const y0 = bounds.min.y - 0.02, y1 = bounds.max.y + 0.02;
   const rand = rng(7);
+  let last = 0; // the trace's value once every line and surface is in
   const segs: number[] = [], times: number[] = [];
   const v = new THREE.Vector3(), w = new THREE.Vector3();
   const hidden: THREE.Object3D[] = []; // drawn by their own shaders: shown once filled
@@ -209,6 +210,8 @@ export function mountIntro(root: THREE.Object3D, bounds: THREE.Box3, fillAxis: T
       const g = o.geometry as THREE.BufferGeometry;
       const count = g.attributes.position.count;
       g.setAttribute('aBuild', new THREE.BufferAttribute(new Float32Array(count).fill(start), 1));
+      if (!g.boundingBox) g.computeBoundingBox();
+      last = Math.max(last, when(g.boundingBox!.clone().applyMatrix4(o.matrixWorld).max.y) + LAG);
       mats.forEach(patch);
       // cables (tubes) appear as surfaces only: their edges would be a bundle of lines
       if (g.type === 'TubeGeometry' || count > 60000) return;
@@ -222,6 +225,7 @@ export function mountIntro(root: THREE.Object3D, bounds: THREE.Box3, fillAxis: T
         const t0 = when(lo.y) + jitter, t1 = Math.max(when(hi.y) + jitter, t0 + 0.03 + rand() * 0.04);
         segs.push(lo.x, lo.y, lo.z, hi.x, hi.y, hi.z);
         times.push(t0, t1);
+        last = Math.max(last, t1);
       }
       eg.dispose();
     });
@@ -241,7 +245,13 @@ export function mountIntro(root: THREE.Object3D, bounds: THREE.Box3, fillAxis: T
   // the timeline, in seconds from `begin`
   const smooth = (a: number, b: number, x: number) => THREE.MathUtils.smoothstep(x, a, b);
   const ease = (x: number) => (x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2);
-  const TRACE = [0.6, 3.2], FILL = [3.35, 4.1], END = 4.9;
+  const TRACE = [0.6, 3.2];
+  // the trace is finished once it passes `last` (inverting its easing for
+  // when), then the finished hologram holds for a moment before the fill
+  const unease = (y: number) => (y < 0.5 ? Math.sqrt(y / 2) : 1 - Math.sqrt((1 - y) * 2) / 2);
+  const traced = TRACE[0] + unease(Math.min(1, last / 1.1)) * (TRACE[1] - TRACE[0]);
+  const HOLD = 0.55;
+  const FILL = [traced + HOLD, traced + HOLD + 0.75], END = FILL[1] + 0.8;
   let start = -1;
   let done = false;
   let shadow = 0; // how far the shadows are in, 0..1
