@@ -8,12 +8,12 @@ import { rng } from './kit';
 //      lines from the floor up, each object starting a beat after the one
 //      before (the desk first, the cables last), the lines growing along
 //      their length with a hot tip; behind them the surfaces appear as a
-//      hologram: a
-//      monochrome render in the line colour, with a 4 cm grid and faint
-//      scanlines drifting up.
+//      hologram: a monochrome render in the line colour, with a 4 cm grid
+//      and faint scanlines drifting up.
 //   2. Fill. Once the whole set stands there as a hologram, a bright plane
-//      rises through it; below the plane the real materials, colours and
-//      shadows take over, and the lines fade away.
+//      sweeps quickly through it on a diagonal (from bottom left to top
+//      right, as you see it); behind the plane the real materials, colours
+//      and shadows take over, and the lines fade away.
 // Mint by night, where the light adds up like a glow; by day the darker
 // mint, drawn on rather than added. With reduced motion there's no intro.
 // One set of uniforms drives every patched material, the lines and the
@@ -22,8 +22,9 @@ import { rng } from './kit';
 export const INTRO = {
   uIntroOn: { value: 1 }, // 0 once it's over: everything renders as normal
   uTrace: { value: -1 }, // the trace's progress, 0..1 over the build order
-  uFill: { value: -1 }, // the fill plane, 0 at the floor .. 1 at the top of the set
-  uFill0: { value: 0 }, uFill1: { value: 1 }, // the fill's heights (m)
+  uFill: { value: -99 }, // the fill plane: how far along uFillAxis it has come (m)
+  uFillAxis: { value: new THREE.Vector3(0, 1, 0) },
+  uY0: { value: 0 }, uY1: { value: 1 }, // the set's heights (m), for the trace
   uWire: { value: 1 }, // the lines' strength
   uFloorR: { value: 0 }, // the floor grid's radius as it powers on (m)
   uHaze: { value: 0 }, // the glow on the floor round the desk
@@ -48,17 +49,17 @@ const V_MAIN = `
     #endif
     vIntroW = (modelMatrix * iw).xyz; vBuild = aBuild; }`;
 const F_DECL = `varying float vBuild; varying vec3 vIntroW;
-  uniform float uIntroOn, uTrace, uFill, uFill0, uFill1, uPaint, uIntroTime;
-  uniform vec3 uLine, uHolo;
+  uniform float uIntroOn, uTrace, uFill, uY0, uY1, uPaint, uIntroTime;
+  uniform vec3 uFillAxis, uLine, uHolo;
   // a 4 cm lattice in world space, one pixel wide
   float introGrid(vec3 p) { vec3 q = p * 25.0; vec3 g = abs(fract(q - 0.5) - 0.5) / max(fwidth(q), vec3(1e-4)); return 1.0 - clamp(min(min(g.x, g.y), g.z), 0.0, 1.0); }`;
 // not traced yet: not there
 const F_CLIP = `
   float introD = 1.0;
   if (uIntroOn > 0.5) {
-    float yN = clamp((vIntroW.y - uFill0) / (uFill1 - uFill0), 0.0, 1.0);
+    float yN = clamp((vIntroW.y - uY0) / (uY1 - uY0), 0.0, 1.0);
     if (uTrace - ${LAG.toFixed(3)} < vBuild + ${RISE.toFixed(3)} * yN) discard;
-    introD = uFill - yN; // > 0 once filled
+    introD = uFill - dot(vIntroW, uFillAxis); // metres; > 0 once filled
   }`;
 // the hologram, then the real thing below the fill plane
 const F_SHADE = `
@@ -70,12 +71,12 @@ const F_SHADE = `
     vec3 holoNight = uHolo * (0.025 + 0.22 * shade) * scan + uLine * grid * 0.4;
     vec3 holoDay = mix(vec3(0.95) * (0.8 + 0.2 * shade), uLine, grid * 0.6);
     vec3 holo = mix(holoNight, holoDay, uPaint);
-    vec3 col = mix(holo, outgoingLight, smoothstep(0.0, 0.012, introD));
+    vec3 col = mix(holo, outgoingLight, smoothstep(0.0, 0.015, introD));
     // the fill plane: a bright cut, a band of light and the grid round it
     float fw = max(fwidth(introD), 1e-5);
     float cut = 1.0 - smoothstep(0.0, fw * 1.5, abs(introD));
-    float band = exp(-abs(introD) * 45.0);
-    float near = exp(-abs(introD) * 14.0) * grid;
+    float band = exp(-abs(introD) * 35.0);
+    float near = exp(-abs(introD) * 11.0) * grid;
     vec3 lit = col + uLine * (cut * 4.0 + band * 1.1 + near * 0.8);
     vec3 drawn = mix(col, uLine, clamp(cut + band * 0.55 + near * 0.6, 0.0, 1.0));
     outgoingLight = mix(lit, drawn, uPaint);
@@ -153,8 +154,8 @@ function traceLines(segs: Float32Array, times: Float32Array) {
         vW = side < 0.5 ? aA : aB;
       }`,
     fragmentShader: /* glsl */ `
-      uniform float uTrace, uFill, uFill0, uFill1, uWire, uPx;
-      uniform vec3 uLine, uTip;
+      uniform float uTrace, uFill, uWire, uPx;
+      uniform vec3 uFillAxis, uLine, uTip;
       varying vec2 vS, vAc, vT;
       varying float vLen;
       varying vec3 vW;
@@ -169,8 +170,8 @@ function traceLines(segs: Float32Array, times: Float32Array) {
         vec2 tv = vec2(s - e, across);
         float tip = f < 1.0 ? exp(-dot(tv, tv) / (5.0 * uPx * uPx)) : 0.0;
         // gone once the fill has passed, flaring as it does
-        float past = uFill - (vW.y - uFill0) / (uFill1 - uFill0);
-        float keep = (1.0 - smoothstep(0.02, 0.16, past)) * (1.0 + exp(-abs(past) * 30.0));
+        float past = uFill - dot(vW, uFillAxis);
+        float keep = (1.0 - smoothstep(0.025, 0.2, past)) * (1.0 + exp(-abs(past) * 24.0));
         float a = min((core * 0.85 + glow * 0.3 + tip) * keep, 1.0) * uWire;
         if (a < 0.003) discard;
         // premultiplied, so the lines can be combined by keeping the brighter
@@ -187,8 +188,9 @@ function traceLines(segs: Float32Array, times: Float32Array) {
 }
 
 // Set the intro up on the desk set. Each top-level part of `root` is an
-// object in the build order; `bounds` is the set's box (for the fill).
-export function mountIntro(root: THREE.Object3D, bounds: THREE.Box3) {
+// object in the build order; `bounds` is the set's box; the fill sweeps
+// along `fillAxis` (a unit vector).
+export function mountIntro(root: THREE.Object3D, bounds: THREE.Box3, fillAxis: THREE.Vector3) {
   root.updateMatrixWorld(true);
   const parts = root.children;
   const step = (1 - RISE) / Math.max(1, parts.length - 1);
@@ -225,13 +227,21 @@ export function mountIntro(root: THREE.Object3D, bounds: THREE.Box3) {
     });
   });
   const lines = traceLines(new Float32Array(segs), new Float32Array(times));
-  INTRO.uFill0.value = y0;
-  INTRO.uFill1.value = y1;
+  INTRO.uY0.value = y0;
+  INTRO.uY1.value = y1;
+  // how far along the fill's axis the set reaches
+  INTRO.uFillAxis.value.copy(fillAxis);
+  let fill0 = Infinity, fill1 = -Infinity;
+  for (let i = 0; i < 8; i++) {
+    const c = new THREE.Vector3(i & 1 ? bounds.max.x : bounds.min.x, i & 2 ? bounds.max.y : bounds.min.y, i & 4 ? bounds.max.z : bounds.min.z);
+    fill0 = Math.min(fill0, c.dot(fillAxis));
+    fill1 = Math.max(fill1, c.dot(fillAxis));
+  }
 
   // the timeline, in seconds from `begin`
   const smooth = (a: number, b: number, x: number) => THREE.MathUtils.smoothstep(x, a, b);
   const ease = (x: number) => (x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2);
-  const TRACE = [0.6, 3.2], FILL = [3.45, 4.85], END = 5.7;
+  const TRACE = [0.6, 3.2], FILL = [3.35, 4.1], END = 4.9;
   let start = -1;
   let done = false;
   let shadow = 0; // how far the shadows are in, 0..1
@@ -243,14 +253,14 @@ export function mountIntro(root: THREE.Object3D, bounds: THREE.Box3) {
     INTRO.uFloorR.value = o.floor;
     INTRO.uHaze.value = o.haze;
     lines.visible = o.on > 0.5;
-    hidden.forEach((h) => (h.visible = o.on < 0.5 || o.fill > 0.95));
+    hidden.forEach((h) => (h.visible = o.on < 0.5 || o.fill > fill1));
   };
   const finish = () => {
     done = true;
     shadow = 1;
     set({ on: 0, trace: 99, fill: 99, wire: 0, floor: 99, haze: 0 });
   };
-  set({ on: 1, trace: -1, fill: -1, wire: 1, floor: 0, haze: 0 });
+  set({ on: 1, trace: -1, fill: -99, wire: 1, floor: 0, haze: 0 });
 
   return {
     lines,
@@ -268,13 +278,13 @@ export function mountIntro(root: THREE.Object3D, bounds: THREE.Box3) {
       const e = start < 0 ? -1 : t - start;
       if (e >= END) return finish();
       const trace = e < TRACE[0] ? -1 : ease(Math.min(1, (e - TRACE[0]) / (TRACE[1] - TRACE[0]))) * 1.1;
-      const fill = e < FILL[0] ? -1 : -0.05 + ease(Math.min(1, (e - FILL[0]) / (FILL[1] - FILL[0]))) * 1.2;
-      shadow = smooth(FILL[0] + 0.3, FILL[1] + 0.3, e);
+      const fill = e < FILL[0] ? -99 : fill0 - 0.05 + ease(Math.min(1, (e - FILL[0]) / (FILL[1] - FILL[0]))) * (fill1 - fill0 + 0.3);
+      shadow = smooth(FILL[0] + 0.15, FILL[1] + 0.25, e);
       set({
         on: 1, trace, fill,
-        wire: 1 - smooth(FILL[1], FILL[1] + 0.6, e),
+        wire: 1 - smooth(FILL[1], FILL[1] + 0.4, e),
         floor: e < 0 ? 0 : 18 * Math.pow(Math.min(1, e / 1.7), 2),
-        haze: smooth(0.15, 1.1, e) * (1 - smooth(FILL[1] - 0.2, END, e)),
+        haze: smooth(0.15, 1.1, e) * (1 - smooth(FILL[1] - 0.3, END, e)),
       });
     },
     finish,

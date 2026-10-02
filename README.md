@@ -119,13 +119,15 @@ scene appears.
   little pointer parallax. With `prefers-reduced-motion` the scene is a still
   frame and the CRT shows the whole log.
 - Rendering stops while the hero is off screen or the tab is hidden.
-- The intro, the first time the hero is shown (about six seconds), in two
-  steps. Trace: out of the black, the floor grid powers on from the desk
-  outward and a glow pools round it; then each object is drawn in glowing
-  lines, one after another, bottom up, with the surfaces appearing behind
-  the lines as a hologram (a monochrome render with a 4 cm grid and
-  scanlines). Fill: a bright plane rises through the hologram, the real
-  materials, colours and shadows take over below it, and the lines fade.
+- The intro, the first time the desk is on screen (about five seconds), in
+  two steps. Trace: out of the black, the floor grid powers on from the
+  desk outward and a glow pools round it; then the set is drawn in glowing
+  lines from the floor up, each object a beat after the one before, with
+  the surfaces appearing behind the lines as a hologram (a monochrome
+  render with a 4 cm grid and scanlines). Fill: a bright plane sweeps
+  quickly through the hologram on a diagonal (bottom left to top right on
+  screen), the real materials, colours and shadows take over behind it,
+  and the lines fade.
   Mint by night, the darker mint by day. Timings are at the bottom of
   `mountIntro`. It doesn't react to the music, and there's none with
   reduced motion.

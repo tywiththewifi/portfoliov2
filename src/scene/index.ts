@@ -118,7 +118,10 @@ export function mountScene(canvas: HTMLCanvasElement, hero: HTMLElement, copy: H
   scene.add(glowLight);
 
   // ---------------------------------------------------------------- intro
-  const intro = mountIntro(set.root, set.bounds);
+  // the fill sweeps up and to the right as you see the desk (at 45° on
+  // screen, from the camera's resting azimuth)
+  const az = THREE.MathUtils.degToRad(-38);
+  const intro = mountIntro(set.root, set.bounds, new THREE.Vector3(Math.cos(az), 1, Math.sin(az)).normalize());
   scene.add(intro.lines);
 
   // ---------------------------------------------------------------- modes
