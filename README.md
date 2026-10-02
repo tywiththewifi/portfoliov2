@@ -33,11 +33,9 @@ Without them the site simply stays silent.
 It only downloads when someone presses play. While it plays, the scene
 listens (`src/music.ts` reads the levels, `setMusic` in `src/scene/index.ts`
 uses them): the boombox meters show the real left and right levels and its
-reels turn, the speaker grilles and the box bump on each beat, slow rings
-stream out across the floor grid in time with the beat (more of them as the
-music swells), the CRT glow and the rim light swell with the bass, and the
-tower's disk light flickers with the hi-hats. With reduced motion only the
-meters and reels move.
+reels turn, the speaker grilles and the box bump on each beat, the CRT glow
+and the rim light swell with the bass, and the tower's disk light flickers
+with the hi-hats. With reduced motion only the meters and reels move.
 
 ## Fonts (licensed, not in git)
 
@@ -67,7 +65,8 @@ Without them the page falls back to Helvetica/Arial and the system monospace.
 | `src/music.ts` | The looping track and its live analysis (levels, bands, beats) |
 | `src/clicks.ts` | The click sound on every click |
 | `src/scene/index.ts` | Renderer, lights, camera drift and parallax, framing (view offset), render loop |
-| `src/scene/grid.ts` | The floor-grid shader, with the rings that pulse out from the desk |
+| `src/scene/grid.ts` | The floor-grid shader |
+| `src/scene/scan.ts` | The wireframe scan: the build on first view, then the sweep every twelve seconds |
 | `src/scene/screen.ts` | The CRT's typing dev log (night) |
 | `src/scene/mockups.ts` | The CRT's website mockups (day) |
 | `src/scene/set.ts` | Where each prop sits on the desk, and the cables |
@@ -120,8 +119,13 @@ scene appears.
   little pointer parallax. With `prefers-reduced-motion` the scene is a still
   frame and the CRT shows the whole log.
 - Rendering stops while the hero is off screen or the tab is hidden.
-- Rings of mint light pulse out across the floor grid from the desk, in
-  both modes; they hold still with reduced motion.
+- The scan, after the hero of ThreeUI's Sunseto template: when the hero is
+  first shown, the desk builds up under a rising plane (a pale study with an
+  ink drawing of its edges above it; a bright cut line, a glowing band and a
+  4 cm grid at it; the finished render below), and from then on a plane
+  sweeps across the desk every twelve seconds, lighting a band of grid and
+  the edges near it. Mint by night, the darker mint by day. It doesn't
+  react to the music, and there's none with reduced motion.
 
 ## Day and night
 

@@ -136,6 +136,7 @@ export function buildBoombox() {
   const grille = g.getObjectByName('boombox-grille')!;
   const grilleZ = grille.position.z;
   let wound = 0.35; // share of tape on the take-up (right) reel
+  tape.wind(wound, 0); // size the packs before the first play
   let level = [0, 0, 0, 0];
   const update = (dt: number, s: { playing: boolean; left: number; right: number; kick: number }) => {
     if (s.playing) {

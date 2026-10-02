@@ -3,6 +3,7 @@ import type { Levels } from '../music';
 import { floorGrid } from './grid';
 import { MINT, setGlow } from './mats';
 import { webMockups } from './mockups';
+import { SCAN, applyScan, scanBuilding, scanOff, scanTimeline, scanWireframe } from './scan';
 import { devLog } from './screen';
 import { buildDeskSet } from './set';
 
@@ -10,7 +11,9 @@ import { buildDeskSet } from './set';
 // that fills the whole hero behind the text. The camera drifts slowly round a
 // point on the desk, with a little pointer parallax, and the desk is framed
 // to one side with a view offset: right of the copy on wide screens, below
-// it on narrow ones. Rings pulse out across the grid from the desk.
+// it on narrow ones. When it's first shown the desk builds up under a rising
+// scan plane, and every twelve seconds a scan sweeps across it (see
+// scan.ts).
 //
 // Two modes, blended over most of a second: night (black void, mint rim and
 // CRT glow, the dev log typing) and day (white void, daylight, website
@@ -18,11 +21,9 @@ import { buildDeskSet } from './set';
 //
 // With the site's music playing (`setMusic`), the scene listens: the boombox
 // meters show the real levels and its reels turn, the speaker grilles and the
-// box bump on each beat, slow rings stream out across the grid in time with
-// the beat, more of them as the music swells (the steady rings fade
-// away meanwhile), the CRT glow and rim light swell with the bass, and the
-// tower's disk light flickers with the hi-hats. With
-// reduced motion only the meters and reels move.
+// box bump on each beat, the CRT glow and rim light swell with the bass, and
+// the tower's disk light flickers with the hi-hats. With reduced motion only
+// the meters and reels move. The scan doesn't listen.
 
 const WIDE = 980; // px; matches the layout breakpoint in styles.css
 const TARGET = new THREE.Vector3(-0.02, 0.62, 0.1); // what the camera circles
@@ -46,12 +47,15 @@ const LOOKS = {
   night: {
     sky: col('#e4e4e4'), ground: col('#141414'), hemi: 1.5, key: col('#ffeedd'), keyI: 3.2,
     rim: col(MINT), rimI: 0.28, glow: col(MINT), glowI: 0.35, shadow: 0.6,
-    minor: col('#3a3a3a'), major: col('#565656'), mint: col(MINT), ring: col(MINT), ringA: 1, minorA: 0.5, majorA: 0.75, axisA: 0.55,
+    minor: col('#3a3a3a'), major: col('#565656'), mint: col(MINT), minorA: 0.5, majorA: 0.75, axisA: 0.55,
+    // the scan: band light, how far it paints rather than adds, edges, ink, the study ahead of the build
+    scan: col(MINT), scanPaint: 0, scanLine: col(MINT), scanInk: col('#1c1c1c'), scanGhost: col('#8e9290'),
   },
   day: {
     sky: col('#ffffff'), ground: col('#d4d4d4'), hemi: 2.1, key: col('#fff8ee'), keyI: 3.4,
     rim: col('#ffffff'), rimI: 0.45, glow: col('#e6fff7'), glowI: 0.1, shadow: 0.3,
-    minor: col('#8c8c8c'), major: col('#6e6e6e'), mint: col('#00b386'), ring: col('#b2b2b2'), ringA: 1.9, minorA: 0.22, majorA: 0.36, axisA: 0.5,
+    minor: col('#8c8c8c'), major: col('#6e6e6e'), mint: col('#00b386'), minorA: 0.22, majorA: 0.36, axisA: 0.5,
+    scan: col('#00a37a'), scanPaint: 1, scanLine: col('#00a37a'), scanInk: col('#3a3a3a'), scanGhost: col('#e2e2e2'),
   },
 };
 
@@ -113,6 +117,27 @@ export function mountScene(canvas: HTMLCanvasElement, hero: HTMLElement, copy: H
   glowLight.position.copy(set.screenCenter).addScaledVector(set.screenNormal, 0.34).add(new THREE.Vector3(0, -0.08, 0));
   scene.add(glowLight);
 
+  // ---------------------------------------------------------------- scan
+  // the desk builds up under a rising plane, then a plane sweeps across it
+  // from screen left to right (and a little toward the camera), as in
+  // Sunseto's hero; the cables light up but aren't outlined
+  applyScan(set.root);
+  scene.add(scanWireframe(set.root, { skip: (m) => m.geometry.type === 'TubeGeometry' }));
+  const scan = (() => {
+    const az = THREE.MathUtils.degToRad(-38); // the camera's resting azimuth
+    const right = new THREE.Vector3(Math.cos(az), 0, Math.sin(az)), toward = new THREE.Vector3(-Math.sin(az), 0, Math.cos(az));
+    const axis = right.multiplyScalar(0.94).addScaledVector(toward, 0.34).normalize();
+    const b = set.bounds;
+    let lo = Infinity, hi = -Infinity;
+    for (let i = 0; i < 8; i++) {
+      const along = (i & 1 ? b.max.x : b.min.x) * axis.x + (i & 4 ? b.max.z : b.min.z) * axis.z;
+      lo = Math.min(lo, along); hi = Math.max(hi, along);
+    }
+    const pad = (hi - lo) * 0.25;
+    return scanTimeline({ y0: -0.03, y1: b.max.y + 0.1, x0: lo - pad, x1: hi + pad, axis });
+  })();
+  let dim = 1; // the scene steps down while the build runs, so the scan reads
+
   // ---------------------------------------------------------------- modes
   let mode: Mode = initial;
   let mix = mode === 'day' ? 1 : 0; // 0 night .. 1 day
@@ -136,11 +161,14 @@ export function mountScene(canvas: HTMLCanvasElement, hero: HTMLElement, copy: H
     u.uMinor.value.lerpColors(n.minor, d.minor, k);
     u.uMajorCol.value.lerpColors(n.major, d.major, k);
     u.uMint.value.lerpColors(n.mint, d.mint, k);
-    u.uRing.value.lerpColors(n.ring, d.ring, k);
-    u.uRingA.value = l(n.ringA, d.ringA);
     u.uMinorA.value = l(n.minorA, d.minorA);
     u.uMajorA.value = l(n.majorA, d.majorA);
     u.uAxisA.value = l(n.axisA, d.axisA);
+    SCAN.uScanCol.value.lerpColors(n.scan, d.scan, k);
+    SCAN.uScanPaint.value = l(n.scanPaint, d.scanPaint);
+    SCAN.uScanLine.value.lerpColors(n.scanLine, d.scanLine, k);
+    SCAN.uScanInk.value.lerpColors(n.scanInk, d.scanInk, k);
+    SCAN.uScanGhost.value.lerpColors(n.scanGhost, d.scanGhost, k);
   };
   // the phosphor's flicker (and the glow it throws), plus the flare; `bass`
   // swells the glow and the rim light with the music
@@ -239,26 +267,11 @@ export function mountScene(canvas: HTMLCanvasElement, hero: HTMLElement, copy: H
 
   // ---------------------------------------------------------------- music
   let music: MusicSource | null = null;
-  const SILENT: Levels = { left: 0, right: 0, bass: 0, mid: 0, high: 0, kick: 0, beat: false, swell: 0 };
-  let emit = 0; // rings owed to the floor, see below
+  const SILENT: Levels = { left: 0, right: 0, bass: 0, mid: 0, high: 0, kick: 0, beat: false };
   const listen = (dt: number, motion: boolean) => {
     const lv = music ? music.read(dt) : SILENT;
     const playing = !!music?.playing;
     set.boombox.update(dt, { playing, left: lv.left, right: lv.right, kick: motion ? lv.kick : 0 });
-    // steady rings while it's quiet, the music's own rings while it plays
-    const u = grid.uniforms;
-    const pulseTo = motion && !playing ? 1 : 0;
-    u.uPulse.value += (pulseTo - u.uPulse.value) * Math.min(1, dt * 1.5);
-    if (motion && playing) {
-      // a stream of slow rings that thickens as the music swells (one every
-      // two seconds in the quiet parts, up to four a second at the peaks); a
-      // beat sets off the next one early, and brighter, so they land in time
-      // without adding to the count
-      emit += dt * (0.5 + 3.5 * lv.swell * lv.swell);
-      const strength = 0.45 + 0.4 * lv.swell;
-      if (lv.beat && emit > 0.35) { grid.ring(t, Math.max(strength, Math.min(1, 0.6 + lv.bass * 0.5))); emit--; }
-      for (; emit >= 1; emit--) grid.ring(t, strength);
-    }
     // the tower's disk light: hi-hats while playing, else bursts of access
     setGlow(set.disk, playing ? (lv.high > 0.32 ? 1 : 0.1) : Math.sin(t * 0.7) * Math.sin(t * 1.9 + 1) > 0.25 && Math.random() < 0.5 ? 1 : 0.1);
     return motion ? lv.bass : 0;
@@ -290,8 +303,13 @@ export function mountScene(canvas: HTMLCanvasElement, hero: HTMLElement, copy: H
     }
     flash = Math.max(0, flash - dt * 3);
     const motion = !reduce.matches;
-    if (motion) screen().update(dt);
-    grid.uniforms.uTime.value = t;
+    if (motion) {
+      screen().update(dt);
+      scan.begin(t + 0.35);
+      scan.apply(t);
+    } else scanOff();
+    dim += ((scanBuilding() ? 0.7 : 1) - dim) * Math.min(1, dt * 3);
+    renderer.toneMappingExposure = dim;
     const bass = listen(dt, motion);
     tube(motion ? t : 0, bass);
     render();
@@ -307,8 +325,8 @@ export function mountScene(canvas: HTMLCanvasElement, hero: HTMLElement, copy: H
     raf = 0;
   };
   // Reduced motion: a single still frame, redrawn only when the layout or
-  // the mode changes; the screen shows a finished frame and the grid holds
-  // still.
+  // the mode changes; the screen shows a finished frame and there's no
+  // scan.
   const still = () => {
     stop();
     ptr.x = ptr.y = 0;
@@ -317,13 +335,13 @@ export function mountScene(canvas: HTMLCanvasElement, hero: HTMLElement, copy: H
     flash = 0;
     blend(mix);
     tube(0);
-    grid.uniforms.uPulse.value = 0;
+    scanOff();
+    renderer.toneMappingExposure = dim = 1;
     screen().full();
     set.boombox.update(0, { playing: false, left: 0, right: 0, kick: 0 });
     render();
   };
   const sync = () => {
-    grid.uniforms.uPulse.value = reduce.matches ? 0 : 1;
     if (running()) { stop(); start(); } else still();
   };
 
@@ -362,7 +380,6 @@ export function mountScene(canvas: HTMLCanvasElement, hero: HTMLElement, copy: H
       flash = 1;
       // not animating (reduced motion, or off screen): jump straight there
       if (!raf) { still(); if (running()) start(); }
-      if (!reduce.matches && !music?.playing) grid.uniforms.uPulse.value = 1;
     },
     setMusic(m: MusicSource) { music = m; },
     musicChanged() {
