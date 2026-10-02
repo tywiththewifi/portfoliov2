@@ -2,6 +2,7 @@ import './fonts.css';
 import './styles.css';
 import { clickSounds } from './clicks';
 import { createMusic } from './music';
+import { mountClips } from './clips';
 import { mountScene, type Mode } from './scene';
 
 // ---------------------------------------------------------------- toast
@@ -97,6 +98,10 @@ document.querySelectorAll<HTMLAnchorElement>('a.pill').forEach((a) =>
 );
 
 document.querySelectorAll('[data-year]').forEach((el) => (el.textContent = String(new Date().getFullYear())));
+
+// ---------------------------------------------------------------- clips
+// The case studies' screen recordings play while they're on screen.
+mountClips();
 
 // ---------------------------------------------------------------- scene
 // Wait (briefly) for the NB faces so the text drawn into the scene's

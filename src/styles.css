@@ -246,15 +246,17 @@ h1 {
   background: var(--panel);
   overflow: hidden;
 }
-.panel img { display: block; height: auto; max-width: 100%; }
-.panel > img, .panel > .phones { width: var(--w, 100%); }
+.panel img, .panel video { display: block; height: auto; max-width: 100%; }
+.panel > img, .panel > video, .panel > .phones { width: var(--w, 100%); }
 .panel.bleed-b { padding-bottom: 0; align-items: flex-end; }
 .panel.bleed-r { padding-right: 0; justify-content: flex-start; }
-.panel.bleed-r > img { max-width: none; width: var(--w, 115%); }
+.panel.bleed-r > img, .panel.bleed-r > video { max-width: none; width: var(--w, 115%); }
 /* a fixed-shape panel that clips what runs past its bottom edge */
 .panel.clip { aspect-ratio: var(--ar, 16 / 7); align-items: flex-start; padding-bottom: 0; }
+/* .fill: a clip panel that takes its height from the panel beside it */
+.panel.clip.fill { aspect-ratio: auto; contain: size; }
 .ar-1 { --ar: 1 / 1; }
-.w90 { --w: 90%; } .w80 { --w: 80%; } .w70 { --w: 70%; } .w60 { --w: 60%; } .w120 { --w: 120%; }
+.w90 { --w: 90%; } .w80 { --w: 80%; } .w70 { --w: 70%; } .w60 { --w: 60%; } .w50 { --w: 50%; } .w120 { --w: 120%; }
 
 /* screenshots: shadows follow each frame's corner radius */
 .shot { box-shadow: 0 24px 60px var(--shadow); }
@@ -262,9 +264,35 @@ h1 {
 .shot.phone { border-radius: 11.3% / 5.2%; }
 .shot.card { border-radius: 16px; }
 
+/* the play/pause button on a screen recording (src/clips.ts): shown on
+   hover or focus, always on touch screens, and whenever the clip is held */
+.clip-toggle {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(10, 10, 10, 0.6);
+  color: #fafafa;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.clip-toggle svg { width: 16px; height: 16px; }
+.panel:hover .clip-toggle, .clip-toggle:focus-visible, .clip-toggle[data-state='paused'] { opacity: 1; }
+@media (hover: none) { .clip-toggle { opacity: 1; } }
+
 /* a row of phone screens; .stagger drops every other one a little */
 .phones { --n: 3; --g: clamp(10px, 2.4vw, 32px); display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: var(--g); }
-.phones > img { flex: 0 0 calc((100% - (var(--n) - 1) * var(--g)) / var(--n)); min-width: 0; }
+.phones > .shot { flex: 0 0 calc((100% - (var(--n) - 1) * var(--g)) / var(--n)); min-width: 0; }
 .phones.n2 { --n: 2; } .phones.n4 { --n: 4; } .phones.n5 { --n: 5; }
 .phones.stagger > :nth-child(even) { margin-top: 12%; }
 
@@ -286,9 +314,10 @@ h1 {
   .row.c21, .row.c12, .row.c11 { grid-template-columns: minmax(0, 1fr); }
   .panel { border-radius: 12px; }
   .phones.n4 { --n: 2; }
+  .phones.w50 { --w: 90%; }
   .phones.n5 { --n: 3; }
   .phones.n5 > :nth-child(n + 4) { display: none; }
-  .panel.clip { aspect-ratio: 4 / 3; }
+  .panel.clip, .panel.clip.fill { aspect-ratio: 4 / 3; contain: none; }
 }
 @media (max-width: 560px) {
   .tiles { grid-template-columns: minmax(0, 1fr); }

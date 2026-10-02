@@ -58,7 +58,9 @@ Without them the page falls back to Helvetica/Arial and the system monospace.
 | Path | What |
 | --- | --- |
 | `index.html` | All the copy: hero, the four case studies, freelance and side projects, and the footer (all placeholder). The email address goes in `data-email` on both Email pills, the LinkedIn and resume links in the pills' `href` (`#` shows "coming soon"), the clock's time zone in `data-tz` |
-| `public/work/placeholders/` | Placeholder screenshots, each labelled with the size the real image should be. Put real images in `public/work/` and point the `<img>` at them |
+| `public/work/<project>/` | The case-study screenshots (WebP) and screen recordings (AV1 WebM, H.264 MP4, and a WebP poster each) |
+| `public/work/placeholders/` | Placeholder screenshots, still used by the side projects |
+| `src/clips.ts` | Plays the screen recordings while they're on screen, and their play/pause buttons |
 | `src/styles.css` | Tokens (`--bg`, `--panel`, `--text`, `--text-2`, `--muted`, `--mint`) and the layout |
 | `src/main.ts` | Clock, day/night buttons, music button, email copy, toasts, mounting the scene |
 | `src/music.ts` | The looping track and its live analysis (levels, bands, beats) |
@@ -81,9 +83,28 @@ or `c11` (halves). A panel pads its screenshot by default; `bleed-b` and
 `bleed-r` let it run off the bottom or right edge; `clip` gives the panel a
 fixed shape and crops what runs past the bottom. `w60`–`w90` set how wide
 the screenshot sits. Phone screens go in a `.phones` group (`n2`, `n4`,
-`n5`, optional `stagger`). Real screenshots don't need the placeholders'
-frames: a browser window at 1600 × 1000, phone screens at 390 × 844 (or
-2x), and crops at the sizes printed on the placeholders.
+`n5`, optional `stagger`). A `clip fill` panel takes its height from the
+panel beside it, for a tall page that should crop to the row.
+
+Each gallery opens with its screen recordings, then the screenshots. The
+recordings are silent loops (`<video data-clip>`): nothing downloads until
+one scrolls into view, it plays only while on screen, and each has a
+play/pause button (with reduced motion they start paused). Each is an AV1
+WebM, which Chrome, Edge and Firefox play, with an H.264 MP4 fallback for
+Safari, plus a WebP poster of the first frame.
+
+How the media was prepared from the originals:
+
+- Phone screenshots and recordings are cropped to the page: the status bar
+  (top 177 px of a 1179 × 2556 screen) and Safari's toolbar (below 2265 px)
+  are cut, leaving 1179 × 2088, then scaled to 720 px wide (screenshots) or
+  640 px wide (recordings)
+- Desktop screenshots are 2000 px wide; desktop recordings 1600 px wide at
+  30 fps, with a few pixels of window edge trimmed
+- Recordings are trimmed to clean loops: no static tails, page-load flashes,
+  cookie banners or Wayback Machine toolbar
+- The TSIA article, announcement and home-section images are the top of
+  full-page captures; the membership image is the top of that page
 
 The models are built in code from bevelled primitives, lathes and extrusions
 rather than loaded from files, so there is nothing to download before the
@@ -116,7 +137,7 @@ in `index.html`. Night and day colours for the page are the tokens in
 ## Still to come
 
 - The X-ray ASCII lens (drawn in NB Mono)
-- Real email, LinkedIn and resume links, the final bio, and the real projects and screenshots
+- Real email, LinkedIn and resume links, and the real side projects
 
 The previous pixel-art desk (`src/hero`, `src/ui`, `src/art`, `src/fx`,
 `src/audio.ts`, `src/sections.ts`, `src/content`, `src/fonts`) is no longer
