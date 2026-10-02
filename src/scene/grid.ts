@@ -8,9 +8,10 @@ import { MINT } from './mats';
 // void around the desk; the two centre axes are a faint mint. Rings of light
 // (mint by night, light grey by day) pulse outward from the desk (the
 // origin) along the lines, fading out as they spread: two at a time on a
-// steady beat when it's quiet, and one per beat of the music while it plays
-// (`beat()`). Colours and strengths are uniforms so day and night can blend
-// between them.
+// steady beat when it's quiet, and while the music plays, slow rings set off
+// one by one (`ring()`; up to 48 travelling at once). Colours and strengths
+// are uniforms so day and night can blend between them.
+const RINGS = 48;
 export function floorGrid(o: { cell?: number; major?: number; near?: number; far?: number } = {}) {
   const mat = new THREE.ShaderMaterial({
     transparent: true,
@@ -31,10 +32,11 @@ export function floorGrid(o: { cell?: number; major?: number; near?: number; far
       // pulse: seconds, strength (0 = off), seconds between rings, how far they travel
       uTime: { value: 0 },
       uPulse: { value: 1 },
-      // rings set off by the music: birth times (seconds), strengths, lifetime
-      uBeats: { value: new THREE.Vector4(-99, -99, -99, -99) },
-      uBeatAmp: { value: new THREE.Vector4() },
-      uBeatLife: { value: 1.8 },
+      // rings set off by the music, each (birth time in seconds, strength),
+      // and how long each takes to cross the floor (slow: about 1.4 units a
+      // second)
+      uRings: { value: Array.from({ length: RINGS }, () => new THREE.Vector2(-99, 0)) },
+      uRingLife: { value: 6 },
       uPeriod: { value: 4.2 },
       uReach: { value: 9 },
     },
@@ -47,8 +49,9 @@ export function floorGrid(o: { cell?: number; major?: number; near?: number; far
       }`,
     fragmentShader: /* glsl */ `
       uniform float uCell, uMajor, uNear, uFar, uMinorA, uMajorA, uAxisA;
-      uniform float uTime, uPulse, uPeriod, uReach, uRingA, uBeatLife;
-      uniform vec4 uBeats, uBeatAmp;
+      #define RINGS ${RINGS}
+      uniform float uTime, uPulse, uPeriod, uReach, uRingA, uRingLife;
+      uniform vec2 uRings[RINGS];
       uniform vec3 uMinor, uMajorCol, uMint, uRing;
       varying vec3 vW;
       // 1 on a line one pixel wide, 0 off it
@@ -77,24 +80,34 @@ export function floorGrid(o: { cell?: number; major?: number; near?: number; far
           ring += exp(-x * x) * (1.0 - k) * (1.0 - k) * smoothstep(0.0, 0.08, k);
         }
         ring *= uPulse;
-        // plus one ring per beat of the music, leaving from the desk's edge
-        for (int i = 0; i < 4; i++) {
-          float k = (uTime - uBeats[i]) / uBeatLife;
-          if (k > 0.0 && k < 1.0) {
-            float w = 0.1 + k * 0.38;
-            float x = (d - 0.8 - k * (uReach - 0.8)) / w;
-            ring += exp(-x * x) * (1.0 - k) * (1.0 - k) * uBeatAmp[i];
+        // plus the music's rings, leaving from the desk's edge: thin, so even
+        // several a second read as separate ripples, and fading slowly so
+        // each is seen most of the way out (only computed where a ring could
+        // still show, and only for rings near this point)
+        float music = 0.0;
+        if (d < 7.5) {
+          for (int i = 0; i < RINGS; i++) {
+            float k = (uTime - uRings[i].x) / uRingLife;
+            if (k > 0.0 && k < 1.0) {
+              float w = 0.045 + k * 0.11;
+              float x = (d - 0.8 - k * (uReach - 0.8)) / w;
+              if (abs(x) < 3.0) music += exp(-x * x) * (1.0 - k) * uRings[i].y;
+            }
           }
         }
         // strongest near the desk, gone before they reach the camera
-        ring *= 1.0 - smoothstep(2.0, 7.5, d);
+        float reach = 1.0 - smoothstep(2.0, 7.5, d);
+        ring *= reach;
+        music *= reach;
         float line = max(minor * crowd * 0.7, major);
 
         vec3 col = mix(uMinor, uMajorCol, major);
         col = mix(col, uMint, axis * 0.8);
-        col = mix(col, uRing, clamp(ring * 0.85, 0.0, 1.0));
+        col = mix(col, uRing, clamp((ring + music) * 0.85, 0.0, 1.0));
         float a = max(max(minor * uMinorA * crowd, major * uMajorA), axis * uAxisA);
-        a += ring * (line * 0.45 + 0.02) * uRingA;
+        // the steady rings light the grid lines; the music's thin rings also
+        // draw a faint line of their own so each reads as a whole circle
+        a += (ring * (line * 0.45 + 0.02) + music * (line * 0.45 + 0.09)) * uRingA;
         gl_FragColor = vec4(col, min(a, 1.0) * fade);
         #include <colorspace_fragment>
       }`,
@@ -103,12 +116,11 @@ export function floorGrid(o: { cell?: number; major?: number; near?: number; far
   mesh.rotation.x = -Math.PI / 2;
   mesh.renderOrder = -1;
   mesh.name = 'floor-grid';
-  // set off a ring from the desk now (t: the same clock as uTime)
+  // set off a ring from the desk now (t: the same clock as uTime); past 48
+  // the oldest, by then faded, is reused
   let next = 0;
-  const beat = (t: number, strength = 1) => {
-    const i = next++ % 4;
-    mat.uniforms.uBeats.value.setComponent(i, t);
-    mat.uniforms.uBeatAmp.value.setComponent(i, strength);
+  const ring = (t: number, strength = 1) => {
+    mat.uniforms.uRings.value[next++ % RINGS].set(t, strength);
   };
-  return { mesh, uniforms: mat.uniforms, beat };
+  return { mesh, uniforms: mat.uniforms, ring };
 }

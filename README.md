@@ -33,10 +33,11 @@ Without them the site simply stays silent.
 It only downloads when someone presses play. While it plays, the scene
 listens (`src/music.ts` reads the levels, `setMusic` in `src/scene/index.ts`
 uses them): the boombox meters show the real left and right levels and its
-reels turn, the speaker grilles and the box bump on each beat, every beat
-sends a ring out across the floor grid, the CRT glow and the rim light swell
-with the bass, and the tower's disk light flickers with the hi-hats. With
-reduced motion only the meters and reels move.
+reels turn, the speaker grilles and the box bump on each beat, slow rings
+stream out across the floor grid in time with the beat (more of them as the
+music swells), the CRT glow and the rim light swell with the bass, and the
+tower's disk light flickers with the hi-hats. With reduced motion only the
+meters and reels move.
 
 ## Fonts (licensed, not in git)
 

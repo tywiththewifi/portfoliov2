@@ -18,9 +18,10 @@ import { buildDeskSet } from './set';
 //
 // With the site's music playing (`setMusic`), the scene listens: the boombox
 // meters show the real levels and its reels turn, the speaker grilles and the
-// box bump on each beat, every beat sends a ring out across the grid (the
-// steady rings fade away meanwhile), the CRT glow and rim light swell with
-// the bass, and the tower's disk light flickers with the hi-hats. With
+// box bump on each beat, slow rings stream out across the grid in time with
+// the beat, more of them as the music swells (the steady rings fade
+// away meanwhile), the CRT glow and rim light swell with the bass, and the
+// tower's disk light flickers with the hi-hats. With
 // reduced motion only the meters and reels move.
 
 const WIDE = 980; // px; matches the layout breakpoint in styles.css
@@ -238,16 +239,26 @@ export function mountScene(canvas: HTMLCanvasElement, hero: HTMLElement, copy: H
 
   // ---------------------------------------------------------------- music
   let music: MusicSource | null = null;
-  const SILENT: Levels = { left: 0, right: 0, bass: 0, mid: 0, high: 0, kick: 0, beat: false };
+  const SILENT: Levels = { left: 0, right: 0, bass: 0, mid: 0, high: 0, kick: 0, beat: false, swell: 0 };
+  let emit = 0; // rings owed to the floor, see below
   const listen = (dt: number, motion: boolean) => {
     const lv = music ? music.read(dt) : SILENT;
     const playing = !!music?.playing;
     set.boombox.update(dt, { playing, left: lv.left, right: lv.right, kick: motion ? lv.kick : 0 });
-    // steady rings while it's quiet, one ring per beat while it plays
+    // steady rings while it's quiet, the music's own rings while it plays
     const u = grid.uniforms;
     const pulseTo = motion && !playing ? 1 : 0;
     u.uPulse.value += (pulseTo - u.uPulse.value) * Math.min(1, dt * 1.5);
-    if (motion && lv.beat) grid.beat(t, Math.min(1, 0.55 + lv.bass * 0.6));
+    if (motion && playing) {
+      // a stream of slow rings that thickens as the music swells (one every
+      // two seconds in the quiet parts, up to four a second at the peaks); a
+      // beat sets off the next one early, and brighter, so they land in time
+      // without adding to the count
+      emit += dt * (0.5 + 3.5 * lv.swell * lv.swell);
+      const strength = 0.45 + 0.4 * lv.swell;
+      if (lv.beat && emit > 0.35) { grid.ring(t, Math.max(strength, Math.min(1, 0.6 + lv.bass * 0.5))); emit--; }
+      for (; emit >= 1; emit--) grid.ring(t, strength);
+    }
     // the tower's disk light: hi-hats while playing, else bursts of access
     setGlow(set.disk, playing ? (lv.high > 0.32 ? 1 : 0.1) : Math.sin(t * 0.7) * Math.sin(t * 1.9 + 1) > 0.25 && Math.random() < 0.5 ? 1 : 0.1);
     return motion ? lv.bass : 0;

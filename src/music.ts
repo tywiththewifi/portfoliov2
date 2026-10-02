@@ -14,11 +14,12 @@ export type Levels = {
   high: number;
   kick: number; // decaying envelope, 1 on each detected beat
   beat: boolean; // true on the frame a beat lands
+  swell: number; // how loud it is now against the last twenty seconds or so, 0..1 (slow; 0.5 is usual)
 };
 
 export type MusicState = 'idle' | 'loading' | 'playing' | 'paused' | 'error';
 
-const SILENT: Levels = { left: 0, right: 0, bass: 0, mid: 0, high: 0, kick: 0, beat: false };
+const SILENT: Levels = { left: 0, right: 0, bass: 0, mid: 0, high: 0, kick: 0, beat: false, swell: 0 };
 
 export function createMusic(url: string) {
   let ctx: AudioContext | null = null;
@@ -35,7 +36,7 @@ export function createMusic(url: string) {
   // at 150 Hz, read in short (~12 ms) windows; a beat is a sudden rise in
   // that energy well above its average over the last second or so.
   let freq: Float32Array<ArrayBuffer>, wave: Float32Array<ArrayBuffer>, low: Float32Array<ArrayBuffer>;
-  const env = { bass: 0, mid: 0, high: 0, kick: 0, since: 1, prev: 0, fluxMean: 0, fluxVar: 0, lowPeak: 1e-4 };
+  const env = { bass: 0, mid: 0, high: 0, kick: 0, since: 1, prev: 0, fluxMean: 0, fluxVar: 0, lowPeak: 1e-4, loud: 0, loudMean: 0, loudVar: 0, heard: 0 };
   const peak = { bass: 1e-4, mid: 1e-4, high: 1e-4 };
 
   function build() {
@@ -169,7 +170,19 @@ export function createMusic(url: string) {
     env.fluxVar += (d * d - env.fluxVar) * a;
     if (beat) { env.since = 0; env.kick = 1; } else env.kick = Math.max(0, env.kick - dt * 4);
     const l = level(left), r = mono ? l : level(right);
-    return { left: l, right: r, bass: env.bass, mid: env.mid, high: env.high, kick: env.kick, beat };
+    // the swell: loudness smoothed over a second or so, against its average
+    // over the last twenty seconds or so and how far it usually strays from
+    // that, so a phrase building up reads high and a breakdown low whatever
+    // the mastering (the average settles within the first few seconds)
+    const loud = (l + r) / 2;
+    if (!env.heard) env.loud = env.loudMean = loud;
+    env.heard += dt;
+    env.loud += (loud - env.loud) * Math.min(1, dt * (loud > env.loud ? 1.2 : 0.6));
+    const k = Math.min(1, dt / Math.min(20, 1 + env.heard)), dl = env.loud - env.loudMean;
+    env.loudMean += dl * k;
+    env.loudVar += (dl * dl - env.loudVar) * k;
+    const swell = Math.max(0, Math.min(1, 0.5 + dl / (2.5 * Math.max(Math.sqrt(env.loudVar), 0.03))));
+    return { left: l, right: r, bass: env.bass, mid: env.mid, high: env.high, kick: env.kick, beat, swell };
   }
 
   return {
