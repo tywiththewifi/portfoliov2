@@ -1,5 +1,6 @@
 import './fonts.css';
 import './styles.css';
+import { createMusic } from './music';
 import { mountScene, type Mode } from './scene';
 
 // ---------------------------------------------------------------- toast
@@ -49,6 +50,24 @@ function applyMode(next: Mode, remember: boolean) {
 modeButtons.forEach((b) => b.addEventListener('click', () => applyMode(b.dataset.mode as Mode, true)));
 applyMode(mode, false);
 
+// ---------------------------------------------------------------- music
+// The site's track, looped. It only downloads on the first play. The button
+// in the header plays and pauses it, and so does clicking the boombox.
+const musicBtn = document.querySelector<HTMLButtonElement>('[data-music]')!;
+const music = createMusic(new URL(musicBtn.dataset.music!, document.baseURI).href);
+let onMusic = () => {};
+music.onChange((s) => {
+  const on = s === 'playing';
+  musicBtn.setAttribute('aria-pressed', String(on));
+  musicBtn.dataset.state = s;
+  const label = on ? 'Pause music' : s === 'loading' ? 'Loading music' : 'Play music';
+  musicBtn.setAttribute('aria-label', label);
+  musicBtn.title = label;
+  if (s === 'error') toast('The music couldn’t load. Try again in a moment.');
+  onMusic();
+});
+musicBtn.addEventListener('click', () => music.toggle());
+
 // ---------------------------------------------------------------- pills
 // Email pills (hero and footer) copy the address in their data-email.
 document.querySelectorAll<HTMLButtonElement>('[data-email]').forEach((btn) =>
@@ -85,5 +104,13 @@ const fontsIn = Promise.all([
 ]);
 await Promise.race([fontsIn, new Promise((r) => setTimeout(r, 1500))]).catch(() => {});
 const scene = mountScene(canvas, hero, copy, mode);
-if (scene) setSceneMode = (m) => scene.setMode(m);
-else canvas.hidden = true;
+if (scene) {
+  setSceneMode = (m) => scene.setMode(m);
+  scene.setMusic(music);
+  onMusic = () => scene.musicChanged();
+  // the boombox in the scene is a play button too (the header button is the
+  // keyboard-reachable one)
+  const onScenery = (e: PointerEvent) => !(e.target as Element).closest('a, button, .copy') && scene.overBoombox(e.clientX, e.clientY);
+  hero.addEventListener('click', (e) => { if (onScenery(e)) music.toggle(); });
+  hero.addEventListener('pointermove', (e) => { hero.style.cursor = onScenery(e) ? 'pointer' : ''; }, { passive: true });
+} else canvas.hidden = true;

@@ -6,3 +6,7 @@ dist
 # Licensed NB International Pro webfonts, kept out of this public repo.
 # Copy them into public/fonts/ locally (see the README).
 public/fonts/*.woff2
+
+# The site music (Tyler's track), kept out of this public repo for now.
+# Copy it into public/audio/ locally (see the README).
+public/audio/*.mp3

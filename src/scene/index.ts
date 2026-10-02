@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { Levels } from '../music';
 import { floorGrid } from './grid';
 import { MINT, setGlow } from './mats';
 import { webMockups } from './mockups';
@@ -12,15 +13,31 @@ import { buildDeskSet } from './set';
 // it on narrow ones. Rings pulse out across the grid from the desk.
 //
 // Two modes, blended over most of a second: night (black void, mint rim and
-// CRT glow, the dev log typing, the boombox playing) and day (white void,
-// daylight, website mockups on the CRT, the boombox stopped).
+// CRT glow, the dev log typing) and day (white void, daylight, website
+// mockups on the CRT).
+//
+// With the site's music playing (`setMusic`), the scene listens: the boombox
+// meters show the real levels and its reels turn, the speaker grilles and the
+// box bump on each beat, every beat sends a ring out across the grid (the
+// steady rings fade away meanwhile), the CRT glow and rim light swell with
+// the bass, and the tower's disk light flickers with the hi-hats. With
+// reduced motion only the meters and reels move.
 
 const WIDE = 980; // px; matches the layout breakpoint in styles.css
 const TARGET = new THREE.Vector3(-0.02, 0.62, 0.1); // what the camera circles
 const RADIUS = 7.2;
 
 export type Mode = 'day' | 'night';
-export type SceneHandle = { setMode(mode: Mode): void; dispose(): void };
+export type MusicSource = { readonly playing: boolean; read(dt: number): Levels };
+export type SceneHandle = {
+  setMode(mode: Mode): void;
+  // listen to the music; call musicChanged() when it starts or stops
+  setMusic(m: MusicSource): void;
+  musicChanged(): void;
+  // is this point (client px) over the boombox?
+  overBoombox(x: number, y: number): boolean;
+  dispose(): void;
+};
 
 // Everything that differs between night and day.
 const col = (s: string) => new THREE.Color(s);
@@ -102,6 +119,7 @@ export function mountScene(canvas: HTMLCanvasElement, hero: HTMLElement, copy: H
   const screen = () => (mode === 'day' ? mock : log);
   const shadowMat = catcher.material as THREE.ShadowMaterial;
   const u = grid.uniforms;
+  let rimBase = 0;
   const blend = (k: number) => {
     const n = LOOKS.night, d = LOOKS.day, l = (a: number, b: number) => a + (b - a) * k;
     hemi.color.lerpColors(n.sky, d.sky, k);
@@ -110,7 +128,8 @@ export function mountScene(canvas: HTMLCanvasElement, hero: HTMLElement, copy: H
     key.color.lerpColors(n.key, d.key, k);
     key.intensity = l(n.keyI, d.keyI);
     rim.color.lerpColors(n.rim, d.rim, k);
-    rim.intensity = l(n.rimI, d.rimI);
+    rimBase = l(n.rimI, d.rimI);
+    rim.intensity = rimBase;
     glowLight.color.lerpColors(n.glow, d.glow, k);
     shadowMat.opacity = l(n.shadow, d.shadow);
     u.uMinor.value.lerpColors(n.minor, d.minor, k);
@@ -122,11 +141,13 @@ export function mountScene(canvas: HTMLCanvasElement, hero: HTMLElement, copy: H
     u.uMajorA.value = l(n.majorA, d.majorA);
     u.uAxisA.value = l(n.axisA, d.axisA);
   };
-  // the phosphor's flicker (and the glow it throws), plus the flare
-  const tube = (t: number) => {
+  // the phosphor's flicker (and the glow it throws), plus the flare; `bass`
+  // swells the glow and the rim light with the music
+  const tube = (t: number, bass = 0) => {
     const f = (0.97 + (Math.sin(t * 13.7) * 0.012 + Math.sin(t * 5.3) * 0.018) * (1 - mix * 0.7)) * (1 + flash * 0.9);
-    set.phosphor.color.setScalar(f);
-    glowLight.intensity = (LOOKS.night.glowI + (LOOKS.day.glowI - LOOKS.night.glowI) * mix) * f;
+    set.phosphor.color.setScalar(f * (1 + bass * 0.08));
+    glowLight.intensity = (LOOKS.night.glowI + (LOOKS.day.glowI - LOOKS.night.glowI) * mix) * f * (1 + bass * 1.6);
+    rim.intensity = rimBase * (1 + bass * 1.1);
   };
   set.phosphor.map = screen().tex;
   blend(mix);
@@ -215,8 +236,29 @@ export function mountScene(canvas: HTMLCanvasElement, hero: HTMLElement, copy: H
     camera.lookAt(TARGET);
   };
 
+  // ---------------------------------------------------------------- music
+  let music: MusicSource | null = null;
+  const SILENT: Levels = { left: 0, right: 0, bass: 0, mid: 0, high: 0, kick: 0, beat: false };
+  const listen = (dt: number, motion: boolean) => {
+    const lv = music ? music.read(dt) : SILENT;
+    const playing = !!music?.playing;
+    set.boombox.update(dt, { playing, left: lv.left, right: lv.right, kick: motion ? lv.kick : 0 });
+    // steady rings while it's quiet, one ring per beat while it plays
+    const u = grid.uniforms;
+    const pulseTo = motion && !playing ? 1 : 0;
+    u.uPulse.value += (pulseTo - u.uPulse.value) * Math.min(1, dt * 1.5);
+    if (motion && lv.beat) grid.beat(t, Math.min(1, 0.55 + lv.bass * 0.6));
+    // the tower's disk light: hi-hats while playing, else bursts of access
+    setGlow(set.disk, playing ? (lv.high > 0.32 ? 1 : 0.1) : Math.sin(t * 0.7) * Math.sin(t * 1.9 + 1) > 0.25 && Math.random() < 0.5 ? 1 : 0.1);
+    return motion ? lv.bass : 0;
+  };
+  const boomboxBox = new THREE.Box3().setFromObject(set.boombox.group);
+  const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+
   // ---------------------------------------------------------------- loop
   let dirty = true, raf = 0, last = 0, t = 0, onScreen = true;
+  // the loop runs for motion, or (with reduced motion) for the music's meters
+  const running = () => !reduce.matches || !!music?.playing;
   const render = () => {
     renderer.render(scene, camera);
     dirty = false;
@@ -236,16 +278,16 @@ export function mountScene(canvas: HTMLCanvasElement, hero: HTMLElement, copy: H
       blend(mix);
     }
     flash = Math.max(0, flash - dt * 3);
-    screen().update(dt);
-    set.boombox.update(t, dt, mode === 'night');
+    const motion = !reduce.matches;
+    if (motion) screen().update(dt);
     grid.uniforms.uTime.value = t;
-    // the tower's disk light: bursts of access
-    setGlow(set.disk, Math.sin(t * 0.7) * Math.sin(t * 1.9 + 1) > 0.25 && Math.random() < 0.5 ? 1 : 0.1);
-    tube(t);
+    const bass = listen(dt, motion);
+    tube(motion ? t : 0, bass);
     render();
+    if (!running()) still();
   };
   const start = () => {
-    if (raf || reduce.matches || !onScreen || document.hidden) return;
+    if (raf || !running() || !onScreen || document.hidden) return;
     last = 0;
     raf = requestAnimationFrame(tick);
   };
@@ -266,12 +308,12 @@ export function mountScene(canvas: HTMLCanvasElement, hero: HTMLElement, copy: H
     tube(0);
     grid.uniforms.uPulse.value = 0;
     screen().full();
-    set.boombox.update(0, 0, mode === 'night');
+    set.boombox.update(0, { playing: false, left: 0, right: 0, kick: 0 });
     render();
   };
   const sync = () => {
     grid.uniforms.uPulse.value = reduce.matches ? 0 : 1;
-    if (reduce.matches) still(); else { stop(); start(); }
+    if (running()) { stop(); start(); } else still();
   };
 
   const ro = new ResizeObserver(() => {
@@ -298,7 +340,7 @@ export function mountScene(canvas: HTMLCanvasElement, hero: HTMLElement, copy: H
   document.fonts?.ready.then(() => {
     log.draw();
     mock.repaint();
-    if (reduce.matches) still(); else if (!raf) render();
+    if (!running()) still(); else if (!raf) render();
   });
 
   return {
@@ -308,8 +350,19 @@ export function mountScene(canvas: HTMLCanvasElement, hero: HTMLElement, copy: H
       set.phosphor.map = screen().tex;
       flash = 1;
       // not animating (reduced motion, or off screen): jump straight there
-      if (!raf) still();
-      if (!reduce.matches) grid.uniforms.uPulse.value = 1;
+      if (!raf) { still(); if (running()) start(); }
+      if (!reduce.matches && !music?.playing) grid.uniforms.uPulse.value = 1;
+    },
+    setMusic(m: MusicSource) { music = m; },
+    musicChanged() {
+      if (running()) start();
+      else if (!raf) still();
+    },
+    overBoombox(x: number, y: number) {
+      const r = canvas.getBoundingClientRect();
+      ndc.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
+      ray.setFromCamera(ndc, camera);
+      return ray.ray.intersectsBox(boomboxBox);
     },
     dispose() {
       stop();

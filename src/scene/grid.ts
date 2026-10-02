@@ -7,8 +7,10 @@ import { MINT } from './mats';
 // `near` and `far` units from the origin so the grid resolves out of the
 // void around the desk; the two centre axes are a faint mint. Rings of light
 // (mint by night, light grey by day) pulse outward from the desk (the
-// origin) along the lines, two at a time, fading out as they spread. Colours and strengths are uniforms so day and night
-// can blend between them.
+// origin) along the lines, fading out as they spread: two at a time on a
+// steady beat when it's quiet, and one per beat of the music while it plays
+// (`beat()`). Colours and strengths are uniforms so day and night can blend
+// between them.
 export function floorGrid(o: { cell?: number; major?: number; near?: number; far?: number } = {}) {
   const mat = new THREE.ShaderMaterial({
     transparent: true,
@@ -29,6 +31,10 @@ export function floorGrid(o: { cell?: number; major?: number; near?: number; far
       // pulse: seconds, strength (0 = off), seconds between rings, how far they travel
       uTime: { value: 0 },
       uPulse: { value: 1 },
+      // rings set off by the music: birth times (seconds), strengths, lifetime
+      uBeats: { value: new THREE.Vector4(-99, -99, -99, -99) },
+      uBeatAmp: { value: new THREE.Vector4() },
+      uBeatLife: { value: 1.8 },
       uPeriod: { value: 4.2 },
       uReach: { value: 9 },
     },
@@ -41,7 +47,8 @@ export function floorGrid(o: { cell?: number; major?: number; near?: number; far
       }`,
     fragmentShader: /* glsl */ `
       uniform float uCell, uMajor, uNear, uFar, uMinorA, uMajorA, uAxisA;
-      uniform float uTime, uPulse, uPeriod, uReach, uRingA;
+      uniform float uTime, uPulse, uPeriod, uReach, uRingA, uBeatLife;
+      uniform vec4 uBeats, uBeatAmp;
       uniform vec3 uMinor, uMajorCol, uMint, uRing;
       varying vec3 vW;
       // 1 on a line one pixel wide, 0 off it
@@ -61,7 +68,7 @@ export function floorGrid(o: { cell?: number; major?: number; near?: number; far
         float crowd = 1.0 - smoothstep(0.25, 0.6, max(fwidth(p.x), fwidth(p.y)) / uCell);
         float fade = 1.0 - smoothstep(uNear, uFar, d);
 
-        // two rings, half a period apart, widening and fading as they go
+        // two steady rings, half a period apart, widening and fading as they go
         float ring = 0.0;
         for (int i = 0; i < 2; i++) {
           float k = fract(uTime / uPeriod + float(i) * 0.5);
@@ -69,8 +76,18 @@ export function floorGrid(o: { cell?: number; major?: number; near?: number; far
           float x = (d - k * uReach) / w;
           ring += exp(-x * x) * (1.0 - k) * (1.0 - k) * smoothstep(0.0, 0.08, k);
         }
+        ring *= uPulse;
+        // plus one ring per beat of the music, leaving from the desk's edge
+        for (int i = 0; i < 4; i++) {
+          float k = (uTime - uBeats[i]) / uBeatLife;
+          if (k > 0.0 && k < 1.0) {
+            float w = 0.1 + k * 0.38;
+            float x = (d - 0.8 - k * (uReach - 0.8)) / w;
+            ring += exp(-x * x) * (1.0 - k) * (1.0 - k) * uBeatAmp[i];
+          }
+        }
         // strongest near the desk, gone before they reach the camera
-        ring *= uPulse * (1.0 - smoothstep(2.0, 7.5, d));
+        ring *= 1.0 - smoothstep(2.0, 7.5, d);
         float line = max(minor * crowd * 0.7, major);
 
         vec3 col = mix(uMinor, uMajorCol, major);
@@ -86,5 +103,12 @@ export function floorGrid(o: { cell?: number; major?: number; near?: number; far
   mesh.rotation.x = -Math.PI / 2;
   mesh.renderOrder = -1;
   mesh.name = 'floor-grid';
-  return { mesh, uniforms: mat.uniforms };
+  // set off a ring from the desk now (t: the same clock as uTime)
+  let next = 0;
+  const beat = (t: number, strength = 1) => {
+    const i = next++ % 4;
+    mat.uniforms.uBeats.value.setComponent(i, t);
+    mat.uniforms.uBeatAmp.value.setComponent(i, strength);
+  };
+  return { mesh, uniforms: mat.uniforms, beat };
 }

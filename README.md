@@ -16,6 +16,23 @@ npm run dev      # http://localhost:5173
 npm run build    # typecheck + production build to dist/
 ```
 
+## Music (not in git)
+
+The header's sound button (and clicking the boombox) plays Tyler's track on
+a gapless loop. Like the fonts, the file is git-ignored; put it at:
+
+```
+public/audio/portfolio-track.mp3
+```
+
+It only downloads when someone presses play. While it plays, the scene
+listens (`src/music.ts` reads the levels, `setMusic` in `src/scene/index.ts`
+uses them): the boombox meters show the real left and right levels and its
+reels turn, the speaker grilles and the box bump on each beat, every beat
+sends a ring out across the floor grid, the CRT glow and the rim light swell
+with the bass, and the tower's disk light flickers with the hi-hats. With
+reduced motion only the meters and reels move.
+
 ## Fonts (licensed, not in git)
 
 The page uses NB International Pro (Regular for headings and body, Mono for
@@ -38,7 +55,8 @@ Without them the page falls back to Helvetica/Arial and the system monospace.
 | `index.html` | All the copy: hero, the four case studies, freelance and side projects, and the footer (all placeholder). The email address goes in `data-email` on both Email pills, the LinkedIn and resume links in the pills' `href` (`#` shows "coming soon"), the clock's time zone in `data-tz` |
 | `public/work/placeholders/` | Placeholder screenshots, each labelled with the size the real image should be. Put real images in `public/work/` and point the `<img>` at them |
 | `src/styles.css` | Tokens (`--bg`, `--panel`, `--text`, `--text-2`, `--muted`, `--mint`) and the layout |
-| `src/main.ts` | Clock, day/night buttons, email copy, toasts, mounting the scene |
+| `src/main.ts` | Clock, day/night buttons, music button, email copy, toasts, mounting the scene |
+| `src/music.ts` | The looping track and its live analysis (levels, bands, beats) |
 | `src/scene/index.ts` | Renderer, lights, camera drift and parallax, framing (view offset), render loop |
 | `src/scene/grid.ts` | The floor-grid shader, with the rings that pulse out from the desk |
 | `src/scene/screen.ts` | The CRT's typing dev log (night) |

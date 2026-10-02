@@ -7,6 +7,7 @@ import { MINT, canvasTexture, glow, setGlow, surface } from '../mats';
 // reels turning and its tape packs winding across, a backlit tuner dial, a
 // two-channel LED level meter, piano keys on top (play held down), three
 // knobs, a carry handle and a telescopic antenna. Built facing +z, on y = 0.
+// It plays along with the site's music (see `update`).
 export function buildBoombox() {
   const g = new THREE.Group();
   const W = 0.56, H = 0.27, D = 0.14;
@@ -127,26 +128,31 @@ export function buildBoombox() {
     }
   }
 
-  // t and dt in seconds. Stopped (by day), the reels stand still and the
-  // meters fall away to nothing.
+  // Drive the deck from the music. While it plays the reels turn and the
+  // meters show the left and right channel levels (top row left, bottom
+  // row right, both sides); `kick`, a decaying beat envelope, pushes the
+  // speaker grilles out and gives the whole box a small bump. Stopped, the
+  // reels stand still and the meters fall away.
+  const grille = g.getObjectByName('boombox-grille')!;
+  const grilleZ = grille.position.z;
   let wound = 0.35; // share of tape on the take-up (right) reel
   let level = [0, 0, 0, 0];
-  const update = (t: number, dt: number, playing = true) => {
-    if (playing) {
+  const update = (dt: number, s: { playing: boolean; left: number; right: number; kick: number }) => {
+    if (s.playing) {
       wound = (wound + dt * 0.004) % 1;
       tape.wind(wound, dt);
     }
-    // a lazy, loping level: two beats of pulse over slow noise
-    const beat = Math.pow(Math.max(0, Math.sin(t * Math.PI * 1.55)), 6);
+    const target = [s.left, s.right, s.left, s.right];
     level = level.map((l, i) => {
-      const n = 0.5 + 0.25 * Math.sin(t * (2.3 + i * 0.4) + i) + 0.15 * Math.sin(t * (5.1 + i) + i * 2);
-      const target = playing ? Math.min(1, n * 0.7 + beat * 0.45) : 0;
-      if (!dt) return target; // a still frame shows the level as it is
-      return target > l ? target : Math.max(0, l - dt * 1.6); // fast attack, slow fall
+      const to = s.playing ? target[i] : 0;
+      if (!dt) return to; // a still frame shows the level as it is
+      return to > l ? to : Math.max(0, l - dt * 1.6); // fast attack, slow fall
     });
     meters.forEach((row, r) => row.forEach((m, i) => setGlow(m, (i + 0.5) / 8 < level[r] ? 1 : 0.08)));
+    grille.position.z = grilleZ + s.kick * 0.009;
+    g.scale.setScalar(1 + s.kick * 0.012);
   };
-  update(0, 0);
+  update(0, { playing: false, left: 0, right: 0, kick: 0 });
   return { group: g, update };
 }
 
