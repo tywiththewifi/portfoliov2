@@ -3,7 +3,7 @@ import type { Levels } from '../music';
 import { floorGrid } from './grid';
 import { MINT, setGlow } from './mats';
 import { webMockups } from './mockups';
-import { SCAN, applyScan, scanBuilding, scanOff, scanTimeline, scanWireframe } from './scan';
+import { INTRO, mountIntro } from './intro';
 import { devLog } from './screen';
 import { buildDeskSet } from './set';
 
@@ -11,9 +11,9 @@ import { buildDeskSet } from './set';
 // that fills the whole hero behind the text. The camera drifts slowly round a
 // point on the desk, with a little pointer parallax, and the desk is framed
 // to one side with a view offset: right of the copy on wide screens, below
-// it on narrow ones. When it's first shown the desk builds up under a rising
-// scan plane, and every twelve seconds a scan sweeps across it (see
-// scan.ts).
+// it on narrow ones. The first time it's shown, the scene is built in front
+// of you: traced in glowing lines over a hologram, then filled in with the
+// real thing (see intro.ts).
 //
 // Two modes, blended over most of a second: night (black void, mint rim and
 // CRT glow, the dev log typing) and day (white void, daylight, website
@@ -23,7 +23,7 @@ import { buildDeskSet } from './set';
 // meters show the real levels and its reels turn, the speaker grilles and the
 // box bump on each beat, the CRT glow and rim light swell with the bass, and
 // the tower's disk light flickers with the hi-hats. With reduced motion only
-// the meters and reels move. The scan doesn't listen.
+// the meters and reels move. The intro doesn't listen.
 
 const WIDE = 980; // px; matches the layout breakpoint in styles.css
 const TARGET = new THREE.Vector3(-0.02, 0.62, 0.1); // what the camera circles
@@ -48,14 +48,14 @@ const LOOKS = {
     sky: col('#e4e4e4'), ground: col('#141414'), hemi: 1.5, key: col('#ffeedd'), keyI: 3.2,
     rim: col(MINT), rimI: 0.28, glow: col(MINT), glowI: 0.35, shadow: 0.6,
     minor: col('#3a3a3a'), major: col('#565656'), mint: col(MINT), minorA: 0.5, majorA: 0.75, axisA: 0.55,
-    // the scan: band light, how far it paints rather than adds, edges, ink, the study ahead of the build
-    scan: col(MINT), scanPaint: 0, scanLine: col(MINT), scanInk: col('#1c1c1c'), scanGhost: col('#8e9290'),
+    // the intro: lines and grid, their hot ends, the hologram's tint, whether colour adds or is drawn on
+    line: col(MINT), tip: col('#dcfff4'), holo: col(MINT), paint: 0,
   },
   day: {
     sky: col('#ffffff'), ground: col('#d4d4d4'), hemi: 2.1, key: col('#fff8ee'), keyI: 3.4,
     rim: col('#ffffff'), rimI: 0.45, glow: col('#e6fff7'), glowI: 0.1, shadow: 0.3,
     minor: col('#8c8c8c'), major: col('#6e6e6e'), mint: col('#00b386'), minorA: 0.22, majorA: 0.36, axisA: 0.5,
-    scan: col('#00a37a'), scanPaint: 1, scanLine: col('#00a37a'), scanInk: col('#3a3a3a'), scanGhost: col('#e2e2e2'),
+    line: col('#00a37a'), tip: col('#00543f'), holo: col('#00a37a'), paint: 1,
   },
 };
 
@@ -117,26 +117,9 @@ export function mountScene(canvas: HTMLCanvasElement, hero: HTMLElement, copy: H
   glowLight.position.copy(set.screenCenter).addScaledVector(set.screenNormal, 0.34).add(new THREE.Vector3(0, -0.08, 0));
   scene.add(glowLight);
 
-  // ---------------------------------------------------------------- scan
-  // the desk builds up under a rising plane, then a plane sweeps across it
-  // from screen left to right (and a little toward the camera), as in
-  // Sunseto's hero; the cables light up but aren't outlined
-  applyScan(set.root);
-  scene.add(scanWireframe(set.root, { skip: (m) => m.geometry.type === 'TubeGeometry' }));
-  const scan = (() => {
-    const az = THREE.MathUtils.degToRad(-38); // the camera's resting azimuth
-    const right = new THREE.Vector3(Math.cos(az), 0, Math.sin(az)), toward = new THREE.Vector3(-Math.sin(az), 0, Math.cos(az));
-    const axis = right.multiplyScalar(0.94).addScaledVector(toward, 0.34).normalize();
-    const b = set.bounds;
-    let lo = Infinity, hi = -Infinity;
-    for (let i = 0; i < 8; i++) {
-      const along = (i & 1 ? b.max.x : b.min.x) * axis.x + (i & 4 ? b.max.z : b.min.z) * axis.z;
-      lo = Math.min(lo, along); hi = Math.max(hi, along);
-    }
-    const pad = (hi - lo) * 0.25;
-    return scanTimeline({ y0: -0.03, y1: b.max.y + 0.1, x0: lo - pad, x1: hi + pad, axis });
-  })();
-  let dim = 1; // the scene steps down while the build runs, so the scan reads
+  // ---------------------------------------------------------------- intro
+  const intro = mountIntro(set.root, set.bounds);
+  scene.add(intro.lines);
 
   // ---------------------------------------------------------------- modes
   let mode: Mode = initial;
@@ -145,7 +128,7 @@ export function mountScene(canvas: HTMLCanvasElement, hero: HTMLElement, copy: H
   const screen = () => (mode === 'day' ? mock : log);
   const shadowMat = catcher.material as THREE.ShadowMaterial;
   const u = grid.uniforms;
-  let rimBase = 0;
+  let rimBase = 0, shadowBase = 0;
   const blend = (k: number) => {
     const n = LOOKS.night, d = LOOKS.day, l = (a: number, b: number) => a + (b - a) * k;
     hemi.color.lerpColors(n.sky, d.sky, k);
@@ -157,18 +140,22 @@ export function mountScene(canvas: HTMLCanvasElement, hero: HTMLElement, copy: H
     rimBase = l(n.rimI, d.rimI);
     rim.intensity = rimBase;
     glowLight.color.lerpColors(n.glow, d.glow, k);
-    shadowMat.opacity = l(n.shadow, d.shadow);
+    shadowBase = l(n.shadow, d.shadow);
+    shadowMat.opacity = shadowBase * intro.shadow;
     u.uMinor.value.lerpColors(n.minor, d.minor, k);
     u.uMajorCol.value.lerpColors(n.major, d.major, k);
     u.uMint.value.lerpColors(n.mint, d.mint, k);
     u.uMinorA.value = l(n.minorA, d.minorA);
     u.uMajorA.value = l(n.majorA, d.majorA);
     u.uAxisA.value = l(n.axisA, d.axisA);
-    SCAN.uScanCol.value.lerpColors(n.scan, d.scan, k);
-    SCAN.uScanPaint.value = l(n.scanPaint, d.scanPaint);
-    SCAN.uScanLine.value.lerpColors(n.scanLine, d.scanLine, k);
-    SCAN.uScanInk.value.lerpColors(n.scanInk, d.scanInk, k);
-    SCAN.uScanGhost.value.lerpColors(n.scanGhost, d.scanGhost, k);
+    INTRO.uLine.value.lerpColors(n.line, d.line, k);
+    INTRO.uTip.value.lerpColors(n.tip, d.tip, k);
+    INTRO.uHolo.value.lerpColors(n.holo, d.holo, k);
+    INTRO.uPaint.value = l(n.paint, d.paint);
+    // the lines glow by night (the brighter of line and scene wins), and
+    // are drawn on by day
+    const lm = intro.lines.material;
+    lm.blending = k < 0.5 ? THREE.CustomBlending : THREE.NormalBlending;
   };
   // the phosphor's flicker (and the glow it throws), plus the flare; `bass`
   // swells the glow and the rim light with the music
@@ -192,6 +179,7 @@ export function mountScene(canvas: HTMLCanvasElement, hero: HTMLElement, copy: H
     i & 1 ? b.max.x : b.min.x, i & 2 ? b.max.y : b.min.y, i & 4 ? b.max.z : b.min.z));
   const tmp = new THREE.Vector3();
   let w = 1, h = 1;
+  let deskY = 0; // the middle of the desk's area, in hero px
   const frame = () => {
     const r = hero.getBoundingClientRect();
     w = Math.max(1, Math.round(r.width));
@@ -200,6 +188,7 @@ export function mountScene(canvas: HTMLCanvasElement, hero: HTMLElement, copy: H
     const dpr = Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(3.5e6 / (w * h)));
     renderer.setPixelRatio(dpr);
     renderer.setSize(w, h, false);
+    intro.setResolution(Math.round(w * dpr), Math.round(h * dpr), dpr);
 
     // the free area, in hero pixels
     const c = copy.getBoundingClientRect();
@@ -219,6 +208,7 @@ export function mountScene(canvas: HTMLCanvasElement, hero: HTMLElement, copy: H
       y0 = c.bottom - r.top + 24;
       y1 = h - 16;
     }
+    deskY = (y0 + y1) / 2;
 
     // the box's extent in tan units (x/-z, y/-z in camera space)
     place(0, true);
@@ -305,11 +295,13 @@ export function mountScene(canvas: HTMLCanvasElement, hero: HTMLElement, copy: H
     const motion = !reduce.matches;
     if (motion) {
       screen().update(dt);
-      scan.begin(t + 0.35);
-      scan.apply(t);
-    } else scanOff();
-    dim += ((scanBuilding() ? 0.7 : 1) - dim) * Math.min(1, dt * 3);
-    renderer.toneMappingExposure = dim;
+      if (!intro.done) {
+        // (it waits for the desk to be on screen: on phones it's below the copy)
+        if (hero.getBoundingClientRect().top + deskY < innerHeight) intro.begin(t + 0.2);
+        intro.apply(t);
+        shadowMat.opacity = shadowBase * intro.shadow;
+      }
+    } else if (!intro.done) intro.finish();
     const bass = listen(dt, motion);
     tube(motion ? t : 0, bass);
     render();
@@ -326,17 +318,16 @@ export function mountScene(canvas: HTMLCanvasElement, hero: HTMLElement, copy: H
   };
   // Reduced motion: a single still frame, redrawn only when the layout or
   // the mode changes; the screen shows a finished frame and there's no
-  // scan.
+  // intro.
   const still = () => {
     stop();
     ptr.x = ptr.y = 0;
     place(0);
     mix = mode === 'day' ? 1 : 0;
     flash = 0;
+    if (reduce.matches && !intro.done) intro.finish();
     blend(mix);
     tube(0);
-    scanOff();
-    renderer.toneMappingExposure = dim = 1;
     screen().full();
     set.boombox.update(0, { playing: false, left: 0, right: 0, kick: 0 });
     render();

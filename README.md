@@ -66,7 +66,7 @@ Without them the page falls back to Helvetica/Arial and the system monospace.
 | `src/clicks.ts` | The click sound on every click |
 | `src/scene/index.ts` | Renderer, lights, camera drift and parallax, framing (view offset), render loop |
 | `src/scene/grid.ts` | The floor-grid shader |
-| `src/scene/scan.ts` | The wireframe scan: the build on first view, then the sweep every twelve seconds |
+| `src/scene/intro.ts` | The intro: the scene traced in glowing lines over a hologram, then filled in |
 | `src/scene/screen.ts` | The CRT's typing dev log (night) |
 | `src/scene/mockups.ts` | The CRT's website mockups (day) |
 | `src/scene/set.ts` | Where each prop sits on the desk, and the cables |
@@ -119,13 +119,16 @@ scene appears.
   little pointer parallax. With `prefers-reduced-motion` the scene is a still
   frame and the CRT shows the whole log.
 - Rendering stops while the hero is off screen or the tab is hidden.
-- The scan, after the hero of ThreeUI's Sunseto template: when the hero is
-  first shown, the desk builds up under a rising plane (a pale study with an
-  ink drawing of its edges above it; a bright cut line, a glowing band and a
-  4 cm grid at it; the finished render below), and from then on a plane
-  sweeps across the desk every twelve seconds, lighting a band of grid and
-  the edges near it. Mint by night, the darker mint by day. It doesn't
-  react to the music, and there's none with reduced motion.
+- The intro, the first time the hero is shown (about six seconds), in two
+  steps. Trace: out of the black, the floor grid powers on from the desk
+  outward and a glow pools round it; then each object is drawn in glowing
+  lines, one after another, bottom up, with the surfaces appearing behind
+  the lines as a hologram (a monochrome render with a 4 cm grid and
+  scanlines). Fill: a bright plane rises through the hologram, the real
+  materials, colours and shadows take over below it, and the lines fade.
+  Mint by night, the darker mint by day. Timings are at the bottom of
+  `mountIntro`. It doesn't react to the music, and there's none with
+  reduced motion.
 
 ## Day and night
 

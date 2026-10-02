@@ -1,21 +1,21 @@
 import * as THREE from 'three';
 import { MINT } from './mats';
-import { SCAN } from './scan';
+import { INTRO } from './intro';
 
 // The floor: an infinite-looking grid drawn in a shader on a large
 // transparent plane at y = 0. Quarter-unit cells with a major line every
 // four, antialiased with screen-space derivatives; lines fade out between
 // `near` and `far` units from the origin so the grid resolves out of the
-// void around the desk; the two centre axes are a faint mint. Where the
-// scan's plane (src/scene/scan.ts) meets the floor near the desk it draws a
-// bright line and lights the grid around it. Colours are uniforms so day
-// and night can blend between them.
+// void around the desk; the two centre axes are a faint mint. During the
+// intro (src/scene/intro.ts) the grid powers on from the desk outward, its
+// edge a bright ring, and a glow pools round the desk. Colours are uniforms
+// so day and night can blend between them.
 export function floorGrid(o: { cell?: number; major?: number; near?: number; far?: number } = {}) {
   const mat = new THREE.ShaderMaterial({
     transparent: true,
     depthWrite: false,
     uniforms: {
-      ...SCAN,
+      ...INTRO,
       uCell: { value: o.cell ?? 0.25 },
       uMajor: { value: o.major ?? 4 },
       uNear: { value: o.near ?? 3.5 },
@@ -37,8 +37,8 @@ export function floorGrid(o: { cell?: number; major?: number; near?: number; far
     fragmentShader: /* glsl */ `
       uniform float uCell, uMajor, uNear, uFar, uMinorA, uMajorA, uAxisA;
       uniform vec3 uMinor, uMajorCol, uMint;
-      uniform float uScanPos, uScanK;
-      uniform vec3 uScanAxis, uScanLine;
+      uniform float uIntroOn, uFloorR, uHaze;
+      uniform vec3 uLine;
       varying vec3 vW;
       // 1 on a line one pixel wide, 0 off it
       float lines(vec2 p, float s) {
@@ -62,14 +62,15 @@ export function floorGrid(o: { cell?: number; major?: number; near?: number; far
         col = mix(col, uMint, axis * 0.8);
         float a = max(max(minor * uMinorA * crowd, major * uMajorA), axis * uAxisA);
 
-        // the scan, kept to the floor round the desk
-        if (uScanK > 0.0) {
-          float sd = dot(vW, uScanAxis) - uScanPos;
-          float cut = 1.0 - smoothstep(0.0, max(fwidth(sd), 1e-4) * 1.8, abs(sd));
-          float band = exp(-abs(sd) * 90.0), near = exp(-abs(sd) * 32.0);
-          float s = uScanK * (1.0 - smoothstep(1.2, 4.0, d));
-          col = mix(col, uScanLine, clamp(s * (cut + band + near * line) * 1.5, 0.0, 1.0));
-          a += s * (cut * 0.9 + band * 0.25 + near * line * 0.6);
+        if (uIntroOn > 0.5) {
+          // powering on: nothing past the radius, a bright ring at it that
+          // dims as it spreads, and a glow round the desk
+          a *= 1.0 - smoothstep(uFloorR - 0.4, uFloorR, d);
+          float x = (d - uFloorR) / 0.1;
+          float ring = exp(-x * x) * (1.0 - smoothstep(1.5, 9.0, uFloorR));
+          float haze = exp(-d * d / 1.6) * uHaze;
+          col = mix(col, uLine, clamp(ring + haze * 0.6, 0.0, 1.0));
+          a += ring * (line * 0.9 + 0.12) + haze * (line * 0.22 + 0.06);
         }
         gl_FragColor = vec4(col, min(a, 1.0) * fade);
         #include <colorspace_fragment>
