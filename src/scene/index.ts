@@ -13,7 +13,8 @@ import { buildDeskSet } from './set';
 // to one side with a view offset: right of the copy on wide screens, below
 // it on narrow ones. The first time it's shown, the scene is built in front
 // of you: traced in glowing lines over a hologram, then filled in with the
-// real thing (see intro.ts).
+// real thing (see intro.ts). After that, a mouse over the desk gets an X-ray
+// lens that shows the hologram again inside a circle round the pointer.
 //
 // Two modes, blended over most of a second: night (black void, mint rim and
 // CRT glow, the dev log typing) and day (white void, daylight, website
@@ -240,8 +241,17 @@ export function mountScene(canvas: HTMLCanvasElement, hero: HTMLElement, copy: H
     const r = hero.getBoundingClientRect();
     ptr.tx = THREE.MathUtils.clamp(((e.clientX - r.left) / r.width) * 2 - 1, -1, 1);
     ptr.ty = THREE.MathUtils.clamp(((e.clientY - r.top) / r.height) * 2 - 1, -1, 1);
+    lens.x = e.clientX;
+    lens.y = e.clientY;
+    lens.mouse = e.pointerType === 'mouse';
+    // a still frame (reduced motion) still follows the lens
+    if (!raf && onScreen) { updateLens(0); render(); }
   };
-  const onLeave = () => { ptr.tx = 0; ptr.ty = 0; };
+  const onLeave = () => {
+    ptr.tx = 0; ptr.ty = 0;
+    lens.mouse = false;
+    if (!raf && onScreen) { updateLens(0); render(); }
+  };
   window.addEventListener('pointermove', onPointer, { passive: true });
   document.documentElement.addEventListener('pointerleave', onLeave);
 
@@ -256,6 +266,43 @@ export function mountScene(canvas: HTMLCanvasElement, hero: HTMLElement, copy: H
       TARGET.z + Math.cos(az) * Math.cos(el) * RADIUS,
     );
     camera.lookAt(TARGET);
+  };
+
+  // ---------------------------------------------------------------- x-ray
+  // Once the intro is over, a mouse over the desk (its box on screen, give or
+  // take) gets an X-ray lens: inside a circle round the pointer the set is the
+  // glowing hologram it was built from, the circle ringed in the accent.
+  const ring = document.createElement('div');
+  ring.className = 'xray';
+  ring.setAttribute('aria-hidden', 'true');
+  canvas.after(ring);
+  const lens = { x: -1e4, y: -1e4, mouse: false, k: 0 };
+  const lensRadius = () => Math.round(THREE.MathUtils.clamp(w * 0.075, 80, 140)); // CSS px
+  const overDesk = () => {
+    if (!lens.mouse || !intro.done) return false;
+    const r = hero.getBoundingClientRect();
+    const px = lens.x - r.left, py = lens.y - r.top, pad = 24;
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    for (const c of corners) {
+      tmp.copy(c).project(camera);
+      const sx = ((tmp.x + 1) / 2) * w, sy = ((1 - tmp.y) / 2) * h;
+      x0 = Math.min(x0, sx); x1 = Math.max(x1, sx);
+      y0 = Math.min(y0, sy); y1 = Math.max(y1, sy);
+    }
+    return px > x0 - pad && px < x1 + pad && py > y0 - pad && py < y1 + pad;
+  };
+  // `dt` 0: jump straight to where it should be
+  const updateLens = (dt: number) => {
+    const goal = overDesk() ? 1 : 0;
+    lens.k = dt ? lens.k + (goal - lens.k) * Math.min(1, dt * 9) : goal;
+    if (lens.k < 0.002) lens.k = 0;
+    const r = hero.getBoundingClientRect(), R = lensRadius(), dpr = renderer.getPixelRatio();
+    intro.setLens((lens.x - r.left) * dpr, (r.bottom - lens.y) * dpr, R * dpr, lens.k, t);
+    ring.style.opacity = String(lens.k);
+    if (lens.k > 0) {
+      ring.style.width = ring.style.height = `${2 * R}px`;
+      ring.style.transform = `translate(${(lens.x - r.left - R).toFixed(1)}px, ${(lens.y - r.top - R).toFixed(1)}px)`;
+    }
   };
 
   // ---------------------------------------------------------------- music
@@ -307,6 +354,7 @@ export function mountScene(canvas: HTMLCanvasElement, hero: HTMLElement, copy: H
     } else if (!intro.done) intro.finish();
     const bass = listen(dt, motion);
     tube(motion ? t : 0, bass);
+    updateLens(dt);
     render();
     if (!running()) still();
   };
@@ -333,6 +381,7 @@ export function mountScene(canvas: HTMLCanvasElement, hero: HTMLElement, copy: H
     tube(0);
     screen().full();
     set.boombox.update(0, { playing: false, left: 0, right: 0, kick: 0 });
+    updateLens(0);
     render();
   };
   const sync = () => {

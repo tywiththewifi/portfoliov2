@@ -95,6 +95,32 @@ button { font: inherit; color: inherit; }
   -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 9%, #000 90%, transparent 100%);
   mask-image: linear-gradient(180deg, transparent 0%, #000 9%, #000 90%, transparent 100%);
 }
+/* the X-ray lens over the desk (src/scene/index.ts): the scene draws the
+   hologram inside it; this is its ring and label */
+.xray {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: -1;
+  width: 0;
+  height: 0;
+  border: 1px solid var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 0 28px color-mix(in srgb, var(--accent) 30%, transparent), inset 0 0 22px color-mix(in srgb, var(--accent) 18%, transparent);
+  opacity: 0;
+  pointer-events: none;
+}
+.xray::after {
+  content: 'X-RAY';
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+}
 
 /* header, as on Daru Sim's site: mark, name and role, then the clock and
    the day/night switch on the right */
@@ -224,7 +250,13 @@ h1 {
    src/panels.ts). */
 .work { display: grid; gap: clamp(112px, 13vw, 200px); padding: clamp(64px, 8vw, 120px) var(--gutter) 0; }
 .case { display: grid; gap: clamp(28px, 3.4vw, 44px); min-width: 0; }
-.case-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 48px; }
+/* the role and company sit at the right on wide screens, under the
+   paragraph on phones */
+.case-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px 48px; }
+.case-head .case-meta { flex: none; white-space: nowrap; }
+.case-meta .co { white-space: nowrap; }
+/* the company's mark, a small rounded tile beside its name */
+.case-meta .mark { display: inline-block; width: 18px; height: 18px; margin: 0 8px 0 2px; border-radius: 4px; vertical-align: -4px; }
 .case-intro { display: grid; gap: 12px; max-width: 640px; min-width: 0; }
 .case h2, .foot h2 {
   font-weight: 400;
@@ -337,6 +369,7 @@ h1 {
 .phones.stagger > :nth-child(even) { margin-top: 12%; }
 
 @media (max-width: 760px) {
+  .case-head { flex-direction: column; align-items: flex-start; }
   .row.c21, .row.c12, .row.c11 { grid-template-columns: minmax(0, 1fr); }
   .panel { border-radius: 12px; }
   .phones.n4 { --n: 2; }

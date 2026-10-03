@@ -16,6 +16,10 @@ import { rng } from './kit';
 //      and shadows take over, and the lines fade away.
 // Mint by night, where the light adds up like a glow; by day the darker
 // mint, drawn on rather than added. With reduced motion there's no intro.
+//
+// Afterwards the hologram is still there to see: an X-ray lens (setLens,
+// driven from the scene) shows the set inside a circle on screen as it was
+// before the fill, lines, grid and all.
 // One set of uniforms drives every patched material, the lines and the
 // floor grid; colours are set per mode in `LOOKS` (src/scene/index.ts).
 
@@ -33,7 +37,12 @@ export const INTRO = {
   uTip: { value: new THREE.Color() }, // their hot ends
   uHolo: { value: new THREE.Color() }, // the hologram's tint
   uPaint: { value: 0 }, // 0: light adds (night); 1: colour is drawn on (day)
+  uLens: { value: new THREE.Vector3(-1e4, -1e4, 0) }, // the X-ray lens: centre and radius in drawing-buffer px
+  uLensK: { value: 0 }, // and its strength
 };
+
+// inside the X-ray lens, 0..1 (a crisp edge); GLSL, for the shaders below
+const LENS = `uLensK * (1.0 - smoothstep(uLens.z - 1.5, uLens.z, distance(gl_FragCoord.xy, uLens.xy)))`;
 
 // When a point is traced, in the trace's 0..1: RISE of it comes from its
 // height in the set, the rest from its object's place in the build order;
@@ -49,8 +58,8 @@ const V_MAIN = `
     #endif
     vIntroW = (modelMatrix * iw).xyz; vBuild = aBuild; }`;
 const F_DECL = `varying float vBuild; varying vec3 vIntroW;
-  uniform float uIntroOn, uTrace, uFill, uY0, uY1, uPaint, uIntroTime;
-  uniform vec3 uFillAxis, uLine, uHolo;
+  uniform float uIntroOn, uTrace, uFill, uY0, uY1, uPaint, uIntroTime, uLensK;
+  uniform vec3 uFillAxis, uLine, uHolo, uLens;
   // a 4 cm lattice in world space, one pixel wide
   float introGrid(vec3 p) { vec3 q = p * 25.0; vec3 g = abs(fract(q - 0.5) - 0.5) / max(fwidth(q), vec3(1e-4)); return 1.0 - clamp(min(min(g.x, g.y), g.z), 0.0, 1.0); }`;
 // not traced yet: not there
@@ -61,9 +70,11 @@ const F_CLIP = `
     if (uTrace - ${LAG.toFixed(3)} < vBuild + ${RISE.toFixed(3)} * yN) discard;
     introD = uFill - dot(vIntroW, uFillAxis); // metres; > 0 once filled
   }`;
-// the hologram, then the real thing below the fill plane
+// the hologram, then the real thing behind the fill plane (or outside the
+// X-ray lens)
 const F_SHADE = `
-  if (uIntroOn > 0.5) {
+  float introLens = uLensK > 0.0 ? ${LENS} : 0.0;
+  if (uIntroOn > 0.5 || introLens > 0.0) {
     float gl = dot(outgoingLight, vec3(0.2126, 0.7152, 0.0722));
     float shade = gl / (gl + 0.3);
     float grid = introGrid(vIntroW);
@@ -71,7 +82,7 @@ const F_SHADE = `
     vec3 holoNight = uHolo * (0.025 + 0.22 * shade) * scan + uLine * grid * 0.4;
     vec3 holoDay = mix(vec3(0.95) * (0.8 + 0.2 * shade), uLine, grid * 0.6);
     vec3 holo = mix(holoNight, holoDay, uPaint);
-    vec3 col = mix(holo, outgoingLight, smoothstep(0.0, 0.015, introD));
+    vec3 col = mix(holo, outgoingLight, smoothstep(0.0, 0.015, introD) * (1.0 - introLens));
     // the fill plane: a bright cut, a band of light and the grid round it
     float fw = max(fwidth(introD), 1e-5);
     float cut = 1.0 - smoothstep(0.0, fw * 1.5, abs(introD));
@@ -154,8 +165,8 @@ function traceLines(segs: Float32Array, times: Float32Array) {
         vW = side < 0.5 ? aA : aB;
       }`,
     fragmentShader: /* glsl */ `
-      uniform float uTrace, uFill, uWire, uPx;
-      uniform vec3 uFillAxis, uLine, uTip;
+      uniform float uTrace, uFill, uWire, uPx, uLensK;
+      uniform vec3 uFillAxis, uLine, uTip, uLens;
       varying vec2 vS, vAc, vT;
       varying float vLen;
       varying vec3 vW;
@@ -172,7 +183,9 @@ function traceLines(segs: Float32Array, times: Float32Array) {
         // gone once the fill has passed, flaring as it does
         float past = uFill - dot(vW, uFillAxis);
         float keep = (1.0 - smoothstep(0.025, 0.2, past)) * (1.0 + exp(-abs(past) * 24.0));
-        float a = min((core * 0.85 + glow * 0.3 + tip) * keep, 1.0) * uWire;
+        // (and drawn whole inside the X-ray lens)
+        float lens = ${LENS};
+        float a = min((core * 0.85 + glow * 0.3 + tip) * max(keep * uWire, lens), 1.0);
         if (a < 0.003) discard;
         // premultiplied, so the lines can be combined by keeping the brighter
         // (by night) rather than adding up into white where they crowd
@@ -233,24 +246,29 @@ export function mountIntro(root: THREE.Object3D, bounds: THREE.Box3, fillAxis: T
   const lines = traceLines(new Float32Array(segs), new Float32Array(times));
   INTRO.uY0.value = y0;
   INTRO.uY1.value = y1;
-  // how far along the fill's axis the set reaches
+  // how far along the fill's axis the set itself reaches (its geometry,
+  // not its box, so the fill starts the moment it's under way)
   INTRO.uFillAxis.value.copy(fillAxis);
   let fill0 = Infinity, fill1 = -Infinity;
-  for (let i = 0; i < 8; i++) {
-    const c = new THREE.Vector3(i & 1 ? bounds.max.x : bounds.min.x, i & 2 ? bounds.max.y : bounds.min.y, i & 4 ? bounds.max.z : bounds.min.z);
-    fill0 = Math.min(fill0, c.dot(fillAxis));
-    fill1 = Math.max(fill1, c.dot(fillAxis));
-  }
+  root.traverse((o) => {
+    if (!(o instanceof THREE.Mesh)) return;
+    const pos = (o.geometry as THREE.BufferGeometry).attributes.position;
+    for (let k = 0; k < pos.count; k++) {
+      const a = v.fromBufferAttribute(pos, k).applyMatrix4(o.matrixWorld).dot(fillAxis);
+      fill0 = Math.min(fill0, a);
+      fill1 = Math.max(fill1, a);
+    }
+  });
 
   // the timeline, in seconds from `begin`
   const smooth = (a: number, b: number, x: number) => THREE.MathUtils.smoothstep(x, a, b);
   const ease = (x: number) => (x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2);
   const TRACE = [0.6, 3.2];
   // the trace is finished once it passes `last` (inverting its easing for
-  // when), then the finished hologram holds for a moment before the fill
+  // when), then the fill follows almost at once
   const unease = (y: number) => (y < 0.5 ? Math.sqrt(y / 2) : 1 - Math.sqrt((1 - y) * 2) / 2);
   const traced = TRACE[0] + unease(Math.min(1, last / 1.1)) * (TRACE[1] - TRACE[0]);
-  const HOLD = 0.55;
+  const HOLD = 0.05;
   const FILL = [traced + HOLD, traced + HOLD + 0.75], END = FILL[1] + 0.8;
   let start = -1;
   let done = false;
@@ -276,6 +294,16 @@ export function mountIntro(root: THREE.Object3D, bounds: THREE.Box3, fillAxis: T
     lines,
     get done() { return done; },
     get shadow() { return shadow; },
+    // the X-ray lens: centre and radius in drawing-buffer px, strength 0..1,
+    // and the time (for the hologram's scanlines)
+    setLens(x: number, y: number, r: number, k: number, t: number) {
+      INTRO.uLens.value.set(x, y, r);
+      INTRO.uLensK.value = k;
+      if (done) {
+        INTRO.uIntroTime.value = t;
+        lines.visible = k > 0;
+      }
+    },
     // the canvas's drawing buffer size, and device pixels per CSS pixel
     setResolution(width: number, height: number, dpr: number) {
       lines.material.uniforms.uRes.value.set(width, height);
@@ -288,7 +316,9 @@ export function mountIntro(root: THREE.Object3D, bounds: THREE.Box3, fillAxis: T
       const e = start < 0 ? -1 : t - start;
       if (e >= END) return finish();
       const trace = e < TRACE[0] ? -1 : ease(Math.min(1, (e - TRACE[0]) / (TRACE[1] - TRACE[0]))) * 1.1;
-      const fill = e < FILL[0] ? -99 : fill0 - 0.05 + ease(Math.min(1, (e - FILL[0]) / (FILL[1] - FILL[0]))) * (fill1 - fill0 + 0.3);
+      // (half eased, half steady, so the plane is already moving when it sets off)
+      const fx = Math.min(1, (e - FILL[0]) / (FILL[1] - FILL[0]));
+      const fill = e < FILL[0] ? -99 : fill0 - 0.02 + (ease(fx) + fx) / 2 * (fill1 - fill0 + 0.27);
       shadow = smooth(FILL[0] + 0.15, FILL[1] + 0.25, e);
       set({
         on: 1, trace, fill,

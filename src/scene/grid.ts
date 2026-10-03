@@ -8,7 +8,8 @@ import { INTRO } from './intro';
 // `near` and `far` units from the origin so the grid resolves out of the
 // void around the desk; the two centre axes are a faint mint. During the
 // intro (src/scene/intro.ts) the grid powers on from the desk outward, its
-// edge a bright ring, and a glow pools round the desk. Colours are uniforms
+// edge a bright ring, and a glow pools round the desk; inside the X-ray
+// lens its lines turn to the line colour. Colours are uniforms
 // so day and night can blend between them.
 export function floorGrid(o: { cell?: number; major?: number; near?: number; far?: number } = {}) {
   const mat = new THREE.ShaderMaterial({
@@ -37,8 +38,8 @@ export function floorGrid(o: { cell?: number; major?: number; near?: number; far
     fragmentShader: /* glsl */ `
       uniform float uCell, uMajor, uNear, uFar, uMinorA, uMajorA, uAxisA;
       uniform vec3 uMinor, uMajorCol, uMint;
-      uniform float uIntroOn, uFloorR, uHaze;
-      uniform vec3 uLine;
+      uniform float uIntroOn, uFloorR, uHaze, uLensK;
+      uniform vec3 uLine, uLens;
       varying vec3 vW;
       // 1 on a line one pixel wide, 0 off it
       float lines(vec2 p, float s) {
@@ -71,6 +72,11 @@ export function floorGrid(o: { cell?: number; major?: number; near?: number; far
           float haze = exp(-d * d / 1.6) * uHaze;
           col = mix(col, uLine, clamp(ring + haze * 0.6, 0.0, 1.0));
           a += ring * (line * 0.9 + 0.12) + haze * (line * 0.22 + 0.06);
+        }
+        if (uLensK > 0.0) {
+          float lens = uLensK * (1.0 - smoothstep(uLens.z - 1.5, uLens.z, distance(gl_FragCoord.xy, uLens.xy)));
+          col = mix(col, uLine, lens * 0.8);
+          a += lens * (line * 0.35 + 0.03);
         }
         gl_FragColor = vec4(col, min(a, 1.0) * fade);
         #include <colorspace_fragment>

@@ -90,9 +90,10 @@ Behind each screen is a grid floor like the hero's, running back to a
 horizon behind the screenshot, with a mint centre line and a glow under the
 screen (`src/panels.ts` draws it to the panel's size; its colours are
 `--floor`, `--glow` and `--axis` in `src/styles.css`). With a mouse, the
-screens drift toward the pointer and turn slightly to face it while the
-floor drifts the other way, so they seem suspended above it; in a row of
-phones each moves by a different amount. Not on touch screens or with
+pointer acts like your eye moving: the screens drift the other way and turn
+their near side toward you, and the floor drifts the same way but less, so
+they seem suspended above it; in a row of phones each moves by a different
+amount. Not on touch screens or with
 reduced motion.
 
 Each gallery opens with its screen recordings, then the screenshots. The
@@ -128,18 +129,22 @@ scene appears.
   little pointer parallax. With `prefers-reduced-motion` the scene is a still
   frame and the CRT shows the whole log.
 - Rendering stops while the hero is off screen or the tab is hidden.
-- The intro, the first time the desk is on screen (about five seconds), in
+- The intro, the first time the desk is on screen (about four seconds), in
   two steps. Trace: out of the black, the floor grid powers on from the
   desk outward and a glow pools round it; then the set is drawn in glowing
   lines from the floor up, each object a beat after the one before, with
   the surfaces appearing behind the lines as a hologram (a monochrome
-  render with a 4 cm grid and scanlines). Fill: a bright plane sweeps
-  quickly through the hologram on a diagonal (bottom left to top right on
-  screen), the real materials, colours and shadows take over behind it,
-  and the lines fade.
+  render with a 4 cm grid and scanlines). Fill, the moment
+  the trace finishes: a bright plane sweeps quickly through the hologram
+  on a diagonal (bottom left to top right on screen), the real materials,
+  colours and shadows take over behind it, and the lines fade.
   Mint by night, the darker mint by day. Timings are at the bottom of
   `mountIntro`. It doesn't react to the music, and there's none with
   reduced motion.
+- X-ray: after the intro, a mouse over the desk gets a lens (a ringed
+  circle round the pointer, labelled X-RAY) that shows the set inside it as
+  the hologram it was built from, lines and grid, and turns the floor grid
+  under it to the line colour. Not on touch screens.
 
 ## Day and night
 
