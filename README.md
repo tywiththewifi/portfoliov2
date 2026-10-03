@@ -58,7 +58,7 @@ Without them the page falls back to Helvetica/Arial and the system monospace.
 | --- | --- |
 | `index.html` | All the copy: hero, the four case studies and the footer. The email address goes in `data-email` on both Email pills, the LinkedIn and resume links in the pills' `href` (`#` shows "coming soon"), the clock's time zone in `data-tz` |
 | `public/work/<project>/` | The case-study screenshots (WebP) and screen recordings (AV1 WebM, H.264 MP4, and a WebP poster each) |
-| `src/looks.ts`, `src/looks.css` | Exploration: four treatments for the case-study galleries (floor, room, lattice, no container) and the switcher at the bottom of the screen that compares them; once one is chosen it moves into `styles.css` and these go |
+| `src/panels.ts` | The grid floor behind each case-study screen, and the screens' parallax with the mouse |
 | `src/clips.ts` | Plays the screen recordings while they're on screen, and their play/pause buttons |
 | `src/styles.css` | Tokens (`--bg`, `--panel`, `--text`, `--text-2`, `--muted`, `--mint`) and the layout |
 | `src/main.ts` | Clock, day/night buttons, music button, email copy, toasts, mounting the scene |
@@ -85,6 +85,15 @@ fixed shape and crops what runs past the bottom. `w60`–`w90` set how wide
 the screenshot sits. Phone screens go in a `.phones` group (`n2`, `n4`,
 `n5`, optional `stagger`). A `clip fill` panel takes its height from the
 panel beside it, for a tall page that should crop to the row.
+
+Behind each screen is a grid floor like the hero's, running back to a
+horizon behind the screenshot, with a mint centre line and a glow under the
+screen (`src/panels.ts` draws it to the panel's size; its colours are
+`--floor`, `--glow` and `--axis` in `src/styles.css`). With a mouse, the
+screens drift toward the pointer and turn slightly to face it while the
+floor drifts the other way, so they seem suspended above it; in a row of
+phones each moves by a different amount. Not on touch screens or with
+reduced motion.
 
 Each gallery opens with its screen recordings, then the screenshots. The
 recordings are silent loops (`<video data-clip>`): nothing downloads until

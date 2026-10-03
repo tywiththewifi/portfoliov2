@@ -3,7 +3,7 @@ import './styles.css';
 import { clickSounds } from './clicks';
 import { createMusic } from './music';
 import { mountClips } from './clips';
-import { mountLooks } from './looks';
+import { mountPanels } from './panels';
 import { mountScene, type Mode } from './scene';
 
 // ---------------------------------------------------------------- toast
@@ -104,9 +104,9 @@ document.querySelectorAll('[data-year]').forEach((el) => (el.textContent = Strin
 // The case studies' screen recordings play while they're on screen.
 mountClips();
 
-// ---------------------------------------------------------------- looks
-// Review only: a switcher for trying treatments of the galleries.
-mountLooks();
+// ---------------------------------------------------------------- panels
+// The floors behind the case-study screens, and their parallax.
+mountPanels();
 
 // ---------------------------------------------------------------- scene
 // Wait (briefly) for the NB faces so the text drawn into the scene's
