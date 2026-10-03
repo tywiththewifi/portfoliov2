@@ -2,17 +2,23 @@ import * as THREE from 'three';
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js';
 import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeometry.js';
-import { REST, markCamera, markEdges, markGeometry } from './mark-geometry';
+import { CELL, CELL_OFFSET, LIGHT, LOOKS, REST, markCamera, markEdges, markGeometry } from './mark-geometry';
 
-// The header's mark: the TC monogram as a holographic wireframe, drawn in
-// the accent colour over a faint fill, in a small canvas inside the round
-// badge (CSS adds the glow and scanlines). It rests turned a little to show
+// The header's mark: the TC monogram as solid 3D letters drawn like the
+// scene's hologram (src/scene/intro.ts): shaded faces in the line colour
+// with a fine lattice over them, faint scanlines drifting up, and crisp
+// edges on top (the hidden ones hidden). It rests turned a little to show
 // its depth, swaying slightly, and every 6–12 s (or when hovered) it spins
 // round once. With reduced motion it holds still at rest; without WebGL the
-// badge keeps its plain "TC" text. It only draws while on screen.
+// link keeps its plain "TC" text. It only draws while on screen.
 
 const SPIN = 1.6; // seconds for one turn
+const FIT = 2.0; // how much of the mark (units) spans the link's width
 const ease = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+
+const col = (s: string) => new THREE.Color(s);
+const NIGHT = { line: col(LOOKS.night.line), tip: col(LOOKS.night.tip), holo: col(LOOKS.night.holo) };
+const DAY = { line: col(LOOKS.day.line), tip: col(LOOKS.day.tip), holo: col(LOOKS.day.holo) };
 
 export function mountMark(el: HTMLElement) {
   let renderer: THREE.WebGLRenderer;
@@ -31,30 +37,84 @@ export function mountMark(el: HTMLElement) {
   const scene = new THREE.Scene();
   const camera = markCamera();
   const geo = markGeometry();
-  const color = new THREE.Color();
-  const fillMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.14, depthWrite: false, side: THREE.DoubleSide });
-  const lineMat = new LineMaterial({ linewidth: 1.3, worldUnits: false, transparent: true, opacity: 0.95, depthTest: false });
+  const u = {
+    uLine: { value: new THREE.Color() },
+    uHolo: { value: new THREE.Color() },
+    uPaint: { value: 0 },
+    uTime: { value: 0 },
+    uPx: { value: 1 }, // device px per CSS px
+    uLight: { value: LIGHT },
+    uCell: { value: CELL },
+    uCellOffset: { value: CELL_OFFSET },
+  };
+  // the faces: the hologram's shading, as in src/scene/intro.ts (F_SHADE)
+  const faceMat = new THREE.ShaderMaterial({
+    uniforms: u,
+    polygonOffset: true, // behind the edges drawn on them
+    polygonOffsetFactor: 1,
+    polygonOffsetUnits: 1,
+    vertexShader: /* glsl */ `
+      varying vec3 vP, vN, vNo;
+      void main() {
+        vP = position; vNo = normal;
+        vN = normalize(normalMatrix * normal);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }`,
+    fragmentShader: /* glsl */ `
+      uniform vec3 uLine, uHolo, uLight, uCellOffset;
+      uniform float uPaint, uTime, uPx, uCell;
+      varying vec3 vP, vN, vNo;
+      void main() {
+        // the lattice, about a pixel wide; a face is only crossed by the
+        // planes not parallel to it
+        vec3 q = (vP + uCellOffset) / uCell;
+        vec3 g = abs(fract(q - 0.5) - 0.5) / max(fwidth(q) * max(1.0, uPx * 0.6), vec3(1e-4));
+        g += step(0.9, abs(vNo)) * 1e3;
+        float grid = 1.0 - clamp(min(min(g.x, g.y), g.z), 0.0, 1.0);
+        float gl = 0.12 + 1.1 * max(dot(normalize(vN), uLight), 0.0);
+        float shade = gl / (gl + 0.3);
+        float scan = 0.86 + 0.14 * sin(gl_FragCoord.y / uPx * 2.1 - uTime * 5.0);
+        vec3 night = uHolo * (0.025 + 0.22 * shade) * scan + uLine * grid * 0.4;
+        vec3 day = mix(vec3(0.95) * (0.8 + 0.2 * shade), uLine, grid * 0.6);
+        gl_FragColor = vec4(mix(night, day, uPaint), 1.0);
+        #include <colorspace_fragment>
+      }`,
+  });
+  // the edges: the scene's lines at their brightest, without the glow
+  const lineMat = new LineMaterial({ linewidth: 1.25, worldUnits: false });
   const lines = new LineSegments2(new LineSegmentsGeometry().fromEdgesGeometry(markEdges(geo)), lineMat);
   const group = new THREE.Group();
-  group.add(new THREE.Mesh(geo, fillMat), lines);
+  group.add(new THREE.Mesh(geo, faceMat), lines);
   scene.add(group);
 
   const size = () => {
-    const s = el.clientWidth;
+    const w = el.clientWidth, cw = canvas.clientWidth, ch = canvas.clientHeight;
     const dpr = Math.min(window.devicePixelRatio || 1, 3);
     renderer.setPixelRatio(dpr);
-    renderer.setSize(s, s, false);
+    renderer.setSize(cw, ch, false);
+    u.uPx.value = dpr;
+    // the canvas overhangs the link so a turn is never clipped; FIT units
+    // of the mark span the link
+    camera.aspect = cw / ch;
+    const across = 2 * camera.position.z * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect;
+    camera.zoom = across / (FIT * (cw / w));
+    camera.updateProjectionMatrix();
     // (the lines set their resolution from the canvas, in CSS px, as they
-    // draw, so their width is in CSS px too: thinner in the smaller phone
-    // badge, so it stays a wireframe)
-    lineMat.linewidth = Math.min(1.3, Math.max(0.9, s / 44));
+    // draw, so their width is in CSS px too)
+    lineMat.linewidth = w < 60 ? 1.1 : 1.25;
   };
-  // the accent follows night and day (it eases between them in CSS)
+  // night and day: how far the page is from one to the other, read off its
+  // background as it eases between #0a0a0a and #fafafa
   const root = document.documentElement;
+  const probe = new THREE.Color();
   const tint = () => {
-    color.setStyle(getComputedStyle(root).getPropertyValue('--accent').trim() || '#21ffc0');
-    fillMat.color.copy(color);
-    lineMat.color.copy(color);
+    probe.setStyle(getComputedStyle(root).getPropertyValue('--bg').trim() || '#0a0a0a', THREE.NoColorSpace);
+    const k = THREE.MathUtils.clamp((probe.r - 10 / 255) / (240 / 255), 0, 1);
+    u.uLine.value.lerpColors(NIGHT.line, DAY.line, k);
+    u.uHolo.value.lerpColors(NIGHT.holo, DAY.holo, k);
+    u.uPaint.value = k;
+    // the line at its core: a little toward the hot tip colour
+    lineMat.color.lerpColors(NIGHT.line, NIGHT.tip, 0.4).lerp(probe.lerpColors(DAY.line, DAY.tip, 0.4), k);
   };
 
   const reduce = matchMedia('(prefers-reduced-motion: reduce)');
@@ -74,6 +134,7 @@ export function mountMark(el: HTMLElement) {
   };
   const draw = () => {
     tint();
+    u.uTime.value = t;
     renderer.render(scene, camera);
   };
   const tick = (now: number) => {
