@@ -58,6 +58,7 @@ Without them the page falls back to Helvetica/Arial and the system monospace.
 | --- | --- |
 | `index.html` | All the copy: hero, the four case studies and the footer. The email address goes in `data-email` on both Email pills, the LinkedIn and resume links in the pills' `href` (`#` shows "coming soon"), the clock's time zone in `data-tz` |
 | `public/work/<project>/` | The case-study screenshots (WebP) and screen recordings (AV1 WebM, H.264 MP4, and a WebP poster each) |
+| `src/looks.ts`, `src/looks.css` | Exploration: four treatments for the case-study galleries (floor, room, lattice, no container) and the switcher at the bottom of the screen that compares them; once one is chosen it moves into `styles.css` and these go |
 | `src/clips.ts` | Plays the screen recordings while they're on screen, and their play/pause buttons |
 | `src/styles.css` | Tokens (`--bg`, `--panel`, `--text`, `--text-2`, `--muted`, `--mint`) and the layout |
 | `src/main.ts` | Clock, day/night buttons, music button, email copy, toasts, mounting the scene |
