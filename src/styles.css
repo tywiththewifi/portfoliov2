@@ -202,9 +202,9 @@ h1 {
 /* the intro (src/hero-intro.ts): the text is hidden until it arrives (and
    shown anyway after a few seconds, should the script not run); then the
    heading types in behind a caret */
-.intro #intro-h, .intro .bio > p, .intro .copy .pills > * { opacity: 0; animation: intro-failsafe 0.6s 6s forwards; }
+.intro #intro-h, .intro .bio > p, .intro .copy .pills > *, .intro .stack { opacity: 0; animation: intro-failsafe 0.6s 6s forwards; }
 @keyframes intro-failsafe { to { opacity: 1; } }
-.intro-run .bio > p, .intro-run .copy .pills > * { opacity: 0; }
+.intro-run .bio > p, .intro-run .copy .pills > *, .intro-run .stack { opacity: 0; }
 .untyped { color: transparent; }
 .caret {
   margin: 0 -0.04em;
@@ -240,9 +240,10 @@ h1 {
 }
 .pill:hover { color: var(--text); border-color: var(--line); }
 .pill svg { width: 16px; height: 16px; opacity: 0.7; }
-/* the address a pill goes to, shown above it on hover (or keyboard focus),
-   lined up with its left edge so it never runs off the page */
-.pill-tip {
+/* a label shown above something on hover (or keyboard focus): a pill's
+   address, lined up with its left edge so it never runs off the page, or a
+   logo's name, centred over it */
+.tip {
   position: absolute;
   left: 0;
   bottom: calc(100% + 10px);
@@ -253,15 +254,48 @@ h1 {
   color: var(--text-2);
   font-family: var(--mono);
   font-size: 13px;
+  font-weight: 400;
   line-height: 1;
+  letter-spacing: 0;
+  text-transform: none;
+  text-decoration: none;
   white-space: nowrap;
   opacity: 0;
   transform: translateY(4px);
   pointer-events: none;
   transition: opacity 0.18s, transform 0.18s;
 }
-@media (hover: hover) { .pill:hover .pill-tip { opacity: 1; transform: none; } }
-.pill:focus-visible .pill-tip { opacity: 1; transform: none; }
+@media (hover: hover) {
+  .pill:hover .tip, .stack-more:hover .tip { opacity: 1; transform: none; }
+  .stack li:hover > .tip { opacity: 1; transform: translate(-50%, 0); }
+}
+.pill:focus-visible .tip, .stack-more:focus-visible .tip, .stack-more[aria-expanded='true'] .tip { opacity: 1; transform: none; }
+
+/* the buttons, then the tech stack's logos beside them (below them when
+   there isn't room) */
+.cta { display: flex; flex-wrap: wrap; align-items: center; gap: 22px 36px; margin-top: 44px; }
+.cta .pills { margin-top: 0; }
+.stack { display: flex; align-items: center; gap: 22px; margin: 0; padding: 0; list-style: none; color: var(--muted); }
+.stack li { position: relative; display: flex; }
+.stack svg { display: block; fill: currentColor; transition: color 0.2s; }
+.stack li:hover > svg { color: var(--text); }
+.stack li > .tip { left: 50%; transform: translate(-50%, 4px); }
+.stack-more {
+  position: relative;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.stack-more:hover, .stack-more[aria-expanded='true'] { color: var(--text); }
 
 /* Narrow screens: the text stacks on top and the desk sits below it, in
    the room left by the bottom padding. */

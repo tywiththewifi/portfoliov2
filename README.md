@@ -53,7 +53,7 @@ Without them the page falls back to Helvetica/Arial and the system monospace.
 
 | Path | What |
 | --- | --- |
-| `index.html` | All the copy: hero, the four case studies and the footer. The Email pills copy the address in their `data-email`; each pill's `.pill-tip` is the address shown above it on hover. The clock's time zone is in `data-tz` |
+| `index.html` | All the copy: hero, the four case studies and the footer. The Email pills copy the address in their `data-email`; each pill's `.tip` is the address shown above it on hover. The tech stack's logos beside the hero's pills are inline SVGs (each named in its own `.tip`), and "+ More" lists the rest in its `.tip`. The clock's time zone is in `data-tz` |
 | `public/work/<project>/` | The case-study screenshots (WebP) and screen recordings (AV1 WebM, H.264 MP4, and a WebP poster each) |
 | `src/mark.ts` | Flips the header's TC round every 6–12 s (and when hovered) |
 | `src/hero-intro.ts` | The hero text's intro: the heading types in, then the bio and buttons fade up |

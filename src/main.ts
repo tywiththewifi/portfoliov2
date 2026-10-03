@@ -98,6 +98,16 @@ document.querySelectorAll<HTMLAnchorElement>('a.pill').forEach((a) =>
   }),
 );
 
+// "+ More" after the tech stack's logos shows the rest of it: on hover, or
+// with a click or tap (which a click anywhere else, or Escape, undoes).
+const more = document.querySelector<HTMLButtonElement>('.stack-more');
+if (more) {
+  const open = (on: boolean) => more.setAttribute('aria-expanded', String(on));
+  more.addEventListener('click', () => open(more.getAttribute('aria-expanded') !== 'true'));
+  document.addEventListener('click', (e) => { if (!more.contains(e.target as Node)) open(false); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') open(false); });
+}
+
 document.querySelectorAll('[data-year]').forEach((el) => (el.textContent = String(new Date().getFullYear())));
 
 // ---------------------------------------------------------------- clips
@@ -134,4 +144,4 @@ if (scene) {
 // ---------------------------------------------------------------- intro
 // With the fonts in and the scene built (so nothing stalls it), the heading
 // types itself in and the bio and buttons fade up after it.
-heroIntro(document.getElementById('intro-h')!, [...copy.querySelectorAll<HTMLElement>('.bio > p, .pills > .pill')]);
+heroIntro(document.getElementById('intro-h')!, [...copy.querySelectorAll<HTMLElement>('.bio > p, .pills > .pill, .stack')]);
