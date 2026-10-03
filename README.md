@@ -19,16 +19,13 @@ npm run build    # typecheck + production build to dist/
 ## Music (not in git)
 
 The header's sound button (and clicking the boombox) plays Tyler's track on
-a gapless loop, and every click on the page plays a mouse-click sound
-(`src/clicks.ts`; mouse presses on the way down, taps on the tap, keyboard
-silent). Like the fonts, the sound files are git-ignored; put them at:
+a gapless loop. Like the fonts, the track is git-ignored; put it at:
 
 ```
 public/audio/portfolio-track.mp3
-public/audio/click.mp3
 ```
 
-Without them the site simply stays silent.
+Without it the site simply stays silent.
 
 It only downloads when someone presses play. While it plays, the scene
 listens (`src/music.ts` reads the levels, `setMusic` in `src/scene/index.ts`
@@ -65,7 +62,6 @@ Without them the page falls back to Helvetica/Arial and the system monospace.
 | `src/styles.css` | Tokens (`--bg`, `--panel`, `--text`, `--text-2`, `--muted`, `--mint`) and the layout |
 | `src/main.ts` | Clock, day/night buttons, music button, email copy, toasts, mounting the scene |
 | `src/music.ts` | The looping track and its live analysis (levels, bands, beats) |
-| `src/clicks.ts` | The click sound on every click |
 | `src/scene/index.ts` | Renderer, lights, camera drift and parallax, framing (view offset), render loop |
 | `src/scene/grid.ts` | The floor-grid shader |
 | `src/scene/intro.ts` | The intro: the scene traced in glowing lines over a hologram, then filled in |

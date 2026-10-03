@@ -1,6 +1,5 @@
 import './fonts.css';
 import './styles.css';
-import { clickSounds } from './clicks';
 import { createMusic } from './music';
 import { mountClips } from './clips';
 import { mountMark } from './mark';
@@ -75,11 +74,6 @@ music.onChange((s) => {
   onMusic();
 });
 musicBtn.addEventListener('click', () => music.toggle());
-
-// ---------------------------------------------------------------- clicks
-// A mouse-click sound on every click, anywhere on the page. Its file is set
-// on the music button, next to the track's.
-if (musicBtn.dataset.clickSound) clickSounds(new URL(musicBtn.dataset.clickSound, document.baseURI).href);
 
 // ---------------------------------------------------------------- pills
 // Email pills (hero and footer) copy the address in their data-email.
