@@ -58,8 +58,7 @@ Without them the page falls back to Helvetica/Arial and the system monospace.
 | --- | --- |
 | `index.html` | All the copy: hero, the four case studies and the footer. The email address goes in `data-email` on both Email pills, the LinkedIn and resume links in the pills' `href` (`#` shows "coming soon"), the clock's time zone in `data-tz` |
 | `public/work/<project>/` | The case-study screenshots (WebP) and screen recordings (AV1 WebM, H.264 MP4, and a WebP poster each) |
-| `src/mark.ts`, `src/mark-geometry.ts` | The header's mark: the TC monogram in 3D, drawn like the scene's hologram, that spins round every 6–12 s (and when hovered); its geometry and look |
-| `scripts/favicon.ts` | Draws the mark at rest into `public/favicon.svg` and `public/mark.svg` (see below) |
+| `src/mark.ts` | Flips the header's TC round every 6–12 s (and when hovered) |
 | `src/panels.ts` | The grid floor behind each case-study screen |
 | `src/clips.ts` | Plays the screen recordings while they're on screen, and their play/pause buttons |
 | `src/styles.css` | Tokens (`--bg`, `--panel`, `--text`, `--text-2`, `--muted`, `--mint`) and the layout |
@@ -78,28 +77,18 @@ Without them the page falls back to Helvetica/Arial and the system monospace.
 
 ## The mark and the favicon
 
-The header's mark is the TC monogram as solid 3D letters drawn like the
-scene's hologram during the intro (`src/mark.ts`): each face shaded in the
-line colour with the fine lattice over it and faint scanlines, and the
-edges drawn crisply on top. Mint on dark by night, the deeper mint on near
-white by day. It rests turned a little to show its depth, sways slightly,
-and spins round once every 6–12 seconds or when hovered; with reduced
-motion it holds still, and without WebGL the link shows plain "TC" text.
+The header's mark is a flat TC, the T in the text colour and the C in the
+accent, drawn as two SVG paths in `index.html` rather than set in the
+font, so the favicon can be exactly the same letters. Every 6–12 seconds,
+and when hovered, the letters flip round like cards, the C just after the
+T (`src/mark.ts`); with reduced motion they stay put.
 
-The favicon is the same letters drawn flat from the same angle: shaded
-faces and edges, following the browser's light or dark theme. After
-changing the letters or their look in `src/mark-geometry.ts`, redraw it:
-
-```sh
-node --experimental-strip-types scripts/favicon.ts
-```
-
-That writes `public/favicon.svg` and `public/mark.svg` (larger, with the
-lattice on the faces, for anywhere else the mark is needed). Both are
-transparent. `public/favicon-32.png` (the night look, which reads on light
-and dark tab bars) and `public/apple-touch-icon.png` (180 px: `mark.svg` on
-a full dark square, as iOS rounds it) are rasterised from them, for
-browsers and phones that don't use SVG icons.
+`public/favicon.svg` is those two paths, dark letters on a light browser
+theme and light ones on a dark theme. `public/favicon-32.png` and
+`public/apple-touch-icon.png` (180 px, a full square, as iOS rounds it) put
+the night colours on a dark tile, for browsers and phones that don't use
+SVG icons. If the letters change, change them in both `index.html` and
+`public/favicon.svg`, then re-export the PNGs.
 
 ## Work sections
 
