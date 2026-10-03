@@ -189,7 +189,7 @@ button { font: inherit; color: inherit; }
 .modes button[aria-pressed='true']::before { background: var(--panel); }
 .modes svg { grid-area: 1 / 1; position: relative; width: 20px; height: 20px; }
 
-/* copy: a medium heading, three grey paragraphs, pill links; no eyebrow */
+/* copy: a medium heading, the bio in grey paragraphs, pill links; no eyebrow */
 .copy { width: 100%; max-width: min(640px, 47vw); }
 h1 {
   margin-bottom: 18px;
