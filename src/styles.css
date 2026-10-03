@@ -220,7 +220,7 @@ h1 {
   text-wrap: balance;
 }
 .case-intro p, .foot-cta p { max-width: 60ch; font-size: clamp(16px, 1.3vw, 18px); line-height: 1.6; color: var(--muted); }
-.case-meta, .tile-year, .foot-bar {
+.case-meta, .foot-bar {
   font-family: var(--mono);
   font-size: 12px;
   letter-spacing: 0.06em;
@@ -262,7 +262,6 @@ h1 {
 .shot { box-shadow: 0 24px 60px var(--shadow); }
 .shot.browser { border-radius: 0.9% / 1.44%; }
 .shot.phone { border-radius: 11.3% / 5.2%; }
-.shot.card { border-radius: 16px; }
 
 /* the play/pause button on a screen recording (src/clips.ts): shown on
    hover or focus, always on touch screens, and whenever the clip is held */
@@ -296,20 +295,6 @@ h1 {
 .phones.n2 { --n: 2; } .phones.n4 { --n: 4; } .phones.n5 { --n: 5; }
 .phones.stagger > :nth-child(even) { margin-top: 12%; }
 
-/* freelance and side projects: smaller tiles with a caption */
-.tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px 10px; }
-.tile { display: grid; gap: 16px; align-content: start; margin: 0; min-width: 0; }
-.tile .panel { aspect-ratio: 4 / 3; }
-.tile .panel.bleed { padding: 9% 0 0 9%; align-items: flex-start; justify-content: flex-start; }
-.tile .panel.bleed > img { max-width: none; width: 125%; }
-.tile figcaption { display: grid; gap: 4px; }
-.tile-name { font-size: 17px; }
-.tile-desc { font-size: 15px; line-height: 1.5; color: var(--muted); }
-.tile-year { margin-top: 4px; }
-
-@media (max-width: 979px) {
-  .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
 @media (max-width: 760px) {
   .row.c21, .row.c12, .row.c11 { grid-template-columns: minmax(0, 1fr); }
   .panel { border-radius: 12px; }
@@ -318,9 +303,6 @@ h1 {
   .phones.n5 { --n: 3; }
   .phones.n5 > :nth-child(n + 4) { display: none; }
   .panel.clip, .panel.clip.fill { aspect-ratio: 4 / 3; contain: none; }
-}
-@media (max-width: 560px) {
-  .tiles { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* ---------------------------------------------------------------- footer */

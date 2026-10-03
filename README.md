@@ -1,7 +1,7 @@
 # portfoliov2
 
-Tyler Caldwell's portfolio: a 3D hero, then case studies and side projects
-in the layout of Daru Sim's site. The hero is a Three.js scene filling the whole
+Tyler Caldwell's portfolio: a 3D hero, then case studies in the layout of
+Daru Sim's site. The hero is a Three.js scene filling the whole
 first screen behind the text: a desk standing in a black void on a floor
 grid, with a beige CRT typing a dev log, a tower PC, a keyboard and mouse, a
 cassette boombox with its reels turning, a mug, a cassette case and an office
@@ -56,9 +56,8 @@ Without them the page falls back to Helvetica/Arial and the system monospace.
 
 | Path | What |
 | --- | --- |
-| `index.html` | All the copy: hero, the four case studies, freelance and side projects, and the footer (all placeholder). The email address goes in `data-email` on both Email pills, the LinkedIn and resume links in the pills' `href` (`#` shows "coming soon"), the clock's time zone in `data-tz` |
+| `index.html` | All the copy: hero, the four case studies and the footer. The email address goes in `data-email` on both Email pills, the LinkedIn and resume links in the pills' `href` (`#` shows "coming soon"), the clock's time zone in `data-tz` |
 | `public/work/<project>/` | The case-study screenshots (WebP) and screen recordings (AV1 WebM, H.264 MP4, and a WebP poster each) |
-| `public/work/placeholders/` | Placeholder screenshots, still used by the side projects |
 | `src/clips.ts` | Plays the screen recordings while they're on screen, and their play/pause buttons |
 | `src/styles.css` | Tokens (`--bg`, `--panel`, `--text`, `--text-2`, `--muted`, `--mint`) and the layout |
 | `src/main.ts` | Clock, day/night buttons, music button, email copy, toasts, mounting the scene |
@@ -147,7 +146,7 @@ in `index.html`. Night and day colours for the page are the tokens in
 ## Still to come
 
 - The X-ray ASCII lens (drawn in NB Mono)
-- Real email, LinkedIn and resume links, and the real side projects
+- Real email, LinkedIn and resume links
 
 The previous pixel-art desk (`src/hero`, `src/ui`, `src/art`, `src/fx`,
 `src/audio.ts`, `src/sections.ts`, `src/content`, `src/fonts`) is no longer
