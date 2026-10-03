@@ -140,9 +140,11 @@ export function mountLooks() {
     for (const b of bar.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.look === look));
     if (!remember) return;
     try { localStorage.setItem('tc-look', look); } catch { /* storage blocked */ }
-    const url = new URL(location.href);
-    url.searchParams.set('look', look);
-    history.replaceState(null, '', url);
+    try {
+      const url = new URL(location.href);
+      url.searchParams.set('look', look);
+      history.replaceState(null, '', url);
+    } catch { /* sandboxed previews: the choice just isn't kept in the URL */ }
   };
   for (const [look, name] of LOOKS) {
     const b = document.createElement('button');
