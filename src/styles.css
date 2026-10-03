@@ -270,16 +270,21 @@ h1 {
   .stack li:hover > .tip { opacity: 1; transform: translate(-50%, 0); }
 }
 .pill:focus-visible .tip, .stack-more:focus-visible .tip, .stack-more[aria-expanded='true'] .tip { opacity: 1; transform: none; }
+/* (on touch screens only "+ More" has one, opened with a tap; the rest
+   would only hang off the edge of a phone unseen) */
+@media (hover: none) { .pill .tip, .stack li > .tip { display: none; } }
 
-/* the buttons, then the tech stack's logos beside them (below them when
-   there isn't room) */
-.cta { display: flex; flex-wrap: wrap; align-items: center; gap: 22px 36px; margin-top: 44px; }
-.cta .pills { margin-top: 0; }
-.stack { display: flex; align-items: center; gap: 22px; margin: 0; padding: 0; list-style: none; color: var(--muted); }
+/* the buttons, then the tech stack's logos: side by side on desktop (the
+   row may run a little past the text's measure, and its gaps close up as
+   the window narrows), the logos below the buttons on narrower screens */
+.cta { display: flex; flex-wrap: nowrap; align-items: center; gap: 22px clamp(20px, 2.4vw, 36px); width: max-content; margin-top: 44px; }
+.cta .pills { margin-top: 0; flex-wrap: nowrap; }
+.stack { display: flex; align-items: center; gap: clamp(15px, 1.5vw, 22px); margin: 0; padding: 0; list-style: none; color: var(--muted); }
 .stack li { position: relative; display: flex; }
 .stack svg { display: block; fill: currentColor; transition: color 0.2s; }
 .stack li:hover > svg { color: var(--text); }
 .stack li > .tip { left: 50%; transform: translate(-50%, 4px); }
+.stack-more .tip { left: auto; right: 0; } /* over the logos, so it stays on a phone's screen */
 .stack-more {
   position: relative;
   padding: 2px 0;
@@ -301,6 +306,8 @@ h1 {
    the room left by the bottom padding. */
 @media (max-width: 979px) {
   .copy { max-width: 640px; }
+  .cta { flex-wrap: wrap; width: auto; column-gap: 36px; }
+  .stack { gap: 22px; }
   .hero { align-items: flex-start; padding-top: calc(var(--head-h) + clamp(48px, 12vw, 96px)); padding-bottom: min(96vw, 600px); }
 }
 @media (max-width: 560px) {
@@ -438,6 +445,7 @@ h1 {
 
 @media (max-width: 760px) {
   .case-head { flex-direction: column; align-items: flex-start; }
+  .case-head .case-meta { white-space: normal; } /* (the company's name still keeps together) */
   .row.c21, .row.c12, .row.c11 { grid-template-columns: minmax(0, 1fr); }
   .panel { border-radius: 12px; }
   .phones.n4 { --n: 2; }
