@@ -12,6 +12,9 @@
   <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
   <link rel="preload" href="/fonts/nbinternationalpro-regular.woff2" as="font" type="font/woff2" crossorigin />
   <script>
+    // The hero's text types in when the page opens (src/hero-intro.ts), so
+    // it starts hidden, unless motion is unwelcome.
+    if (matchMedia('(prefers-reduced-motion: no-preference)').matches) document.documentElement.classList.add('intro');
     // Day or night, as the visitor last chose, set before the first paint.
     try {
       if (localStorage.getItem('tc-mode') === 'day') {
@@ -24,9 +27,8 @@
 <body>
   <!--
     The case studies show real screenshots and recordings from
-    public/work/<project>/. The email address goes in data-email on both
-    Email pills; the LinkedIn and resume links go in the pills' href ("#"
-    shows "coming soon").
+    public/work/<project>/. The Email pills copy the address in their
+    data-email; each pill's .pill-tip shows its address on hover.
   -->
   <header class="head">
     <a class="mark" href="#top" aria-label="Tyler Caldwell, home"><svg class="mark-t" viewBox="0 0 92 100" aria-hidden="true"><path d="M0 0H92V20H56V100H36V20H0Z"/></svg><svg class="mark-c" viewBox="103 0 87.16 100" aria-hidden="true"><path d="M190.16 16.54A50 50 0 1 0 190.16 83.46L175.29 70.07A30 30 0 1 1 175.29 29.93Z"/></svg></a>
@@ -59,17 +61,15 @@
           <p>When I’m not creating experiences for the web, I spend my time nerding out over synthesizers and music production in Ableton.</p>
         </div>
         <div class="pills">
-          <button type="button" class="pill" data-email="">
+          <button type="button" class="pill" data-email="tyler.n.caldwell@gmail.com">
             Email
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>
+            <span class="pill-tip">tyler.n.caldwell@gmail.com</span>
           </button>
-          <a class="pill" href="#" target="_blank" rel="noopener" data-name="LinkedIn">
+          <a class="pill" href="https://www.linkedin.com/in/tywiththewifi" target="_blank" rel="noopener" data-name="LinkedIn">
             LinkedIn
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>
-          </a>
-          <a class="pill" href="#" target="_blank" rel="noopener" data-name="Resume">
-            Resume
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>
+            <span class="pill-tip">linkedin.com/in/tywiththewifi</span>
           </a>
         </div>
       </div>
@@ -176,17 +176,15 @@
       <h2>Have a project in mind?</h2>
       <p>I'm open to freelance projects and full-time roles. Email is the quickest way to reach me.</p>
       <div class="pills">
-        <button type="button" class="pill" data-email="">
+        <button type="button" class="pill" data-email="tyler.n.caldwell@gmail.com">
           Email
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>
+          <span class="pill-tip">tyler.n.caldwell@gmail.com</span>
         </button>
-        <a class="pill" href="#" target="_blank" rel="noopener" data-name="LinkedIn">
+        <a class="pill" href="https://www.linkedin.com/in/tywiththewifi" target="_blank" rel="noopener" data-name="LinkedIn">
           LinkedIn
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>
-        </a>
-        <a class="pill" href="#" target="_blank" rel="noopener" data-name="Resume">
-          Resume
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>
+          <span class="pill-tip">linkedin.com/in/tywiththewifi</span>
         </a>
       </div>
     </div>

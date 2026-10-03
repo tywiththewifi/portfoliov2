@@ -1,6 +1,7 @@
 import './fonts.css';
 import './styles.css';
 import { clickSounds } from './clicks';
+import { heroIntro } from './hero-intro';
 import { createMusic } from './music';
 import { mountClips } from './clips';
 import { mountMark } from './mark';
@@ -8,7 +9,7 @@ import { mountPanels } from './panels';
 import { mountScene, type Mode } from './scene';
 
 // ---------------------------------------------------------------- mark
-// The header's spinning wireframe monogram.
+// The header's TC, which flips now and then.
 mountMark(document.querySelector<HTMLElement>('.mark')!);
 
 // ---------------------------------------------------------------- toast
@@ -135,3 +136,8 @@ if (scene) {
   hero.addEventListener('click', (e) => { if (onScenery(e)) music.toggle(); });
   hero.addEventListener('pointermove', (e) => { hero.style.cursor = onScenery(e) ? 'pointer' : ''; }, { passive: true });
 } else canvas.hidden = true;
+
+// ---------------------------------------------------------------- intro
+// With the fonts in and the scene built (so nothing stalls it), the heading
+// types itself in and the bio and buttons fade up after it.
+heroIntro(document.getElementById('intro-h')!, [...copy.querySelectorAll<HTMLElement>('.bio > p, .pills > .pill')]);

@@ -56,9 +56,10 @@ Without them the page falls back to Helvetica/Arial and the system monospace.
 
 | Path | What |
 | --- | --- |
-| `index.html` | All the copy: hero, the four case studies and the footer. The email address goes in `data-email` on both Email pills, the LinkedIn and resume links in the pills' `href` (`#` shows "coming soon"), the clock's time zone in `data-tz` |
+| `index.html` | All the copy: hero, the four case studies and the footer. The Email pills copy the address in their `data-email`; each pill's `.pill-tip` is the address shown above it on hover. The clock's time zone is in `data-tz` |
 | `public/work/<project>/` | The case-study screenshots (WebP) and screen recordings (AV1 WebM, H.264 MP4, and a WebP poster each) |
 | `src/mark.ts` | Flips the header's TC round every 6–12 s (and when hovered) |
+| `src/hero-intro.ts` | The hero text's intro: the heading types in, then the bio and buttons fade up |
 | `src/panels.ts` | The grid floor behind each case-study screen |
 | `src/clips.ts` | Plays the screen recordings while they're on screen, and their play/pause buttons |
 | `src/styles.css` | Tokens (`--bg`, `--panel`, `--text`, `--text-2`, `--muted`, `--mint`) and the layout |
@@ -159,6 +160,19 @@ scene appears.
   lines and grid, and turns the floor grid under it to the line colour.
   Not on touch screens.
 
+## The hero's text
+
+When the page opens, the heading types itself out behind a mint caret
+(about two seconds), and a beat after its last letter the bio's paragraphs
+and then the Email and LinkedIn buttons fade up, one after another
+(`src/hero-intro.ts`). The heading is in the page whole from the start,
+the letters still to come transparent, so it never re-wraps as it types.
+It waits for the scene's first frames and keeps its pace through any
+hitch, so it runs alongside the scene's own intro. A small script in
+`index.html` hides the text before the first paint, only when motion is
+welcome: with reduced motion, or if the page opens scrolled past the hero,
+it is all simply there.
+
 ## Day and night
 
 The sun and moon buttons switch the whole page. Night (the default) is the
@@ -174,7 +188,6 @@ in `index.html`. Night and day colours for the page are the tokens in
 ## Still to come
 
 - The X-ray ASCII lens (drawn in NB Mono)
-- Real email, LinkedIn and resume links
 
 The previous pixel-art desk (`src/hero`, `src/ui`, `src/art`, `src/fx`,
 `src/audio.ts`, `src/sections.ts`, `src/content`, `src/fonts`) is no longer
