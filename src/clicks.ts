@@ -17,10 +17,15 @@ export function clickSounds(url: string, volume = 0.7) {
     // decoded off any live context, so nothing asks to play before a click
     .then((b) => new OfflineAudioContext(1, 1, 44100).decodeAudioData(b))
     .then((b) => {
-      const d = b.getChannelData(0);
+      // the sound starts where either channel first comes within 60 dB of
+      // its peak; back off 5 ms from there so the soft lead-in before the
+      // snap stays in
+      const chans = Array.from({ length: b.numberOfChannels }, (_, c) => b.getChannelData(c));
+      let peak = 0;
+      for (const d of chans) for (const v of d) peak = Math.max(peak, Math.abs(v));
       let i = 0;
-      while (i < d.length && Math.abs(d[i]) < 0.02) i++;
-      head = Math.max(0, i / b.sampleRate - 0.002);
+      while (i < b.length && chans.every((d) => Math.abs(d[i]) < peak / 1000)) i++;
+      head = Math.max(0, i / b.sampleRate - 0.005);
       buffer = b;
     })
     .catch(() => {});
