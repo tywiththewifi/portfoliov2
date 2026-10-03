@@ -185,8 +185,19 @@ button { font: inherit; color: inherit; }
 @keyframes eq { from { transform: scaleY(0.45); } to { transform: scaleY(1.6); } }
 @keyframes blink { 50% { opacity: 0.35; } }
 @media (prefers-reduced-motion: reduce) { .music rect, .music { animation: none !important; } }
-.modes button[aria-pressed='true'] { background: var(--panel); color: var(--text); }
-.modes svg { width: 20px; height: 20px; }
+/* the selected mode sits on a small circle, 24px inside the 40px hit area */
+.modes button::before {
+  content: '';
+  grid-area: 1 / 1;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: transparent;
+  transition: background-color 0.2s;
+}
+.modes button[aria-pressed='true'] { color: var(--text); }
+.modes button[aria-pressed='true']::before { background: var(--panel); }
+.modes svg { grid-area: 1 / 1; position: relative; width: 20px; height: 20px; }
 
 /* copy: a medium heading, three grey paragraphs, pill links; no eyebrow */
 .copy { width: 100%; max-width: min(640px, 47vw); }
