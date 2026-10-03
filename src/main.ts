@@ -105,7 +105,7 @@ document.querySelectorAll('[data-year]').forEach((el) => (el.textContent = Strin
 mountClips();
 
 // ---------------------------------------------------------------- panels
-// The floors behind the case-study screens, and their parallax.
+// The floors behind the case-study screens.
 mountPanels();
 
 // ---------------------------------------------------------------- scene

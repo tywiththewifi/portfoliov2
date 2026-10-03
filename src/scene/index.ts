@@ -271,12 +271,14 @@ export function mountScene(canvas: HTMLCanvasElement, hero: HTMLElement, copy: H
   // ---------------------------------------------------------------- x-ray
   // Once the intro is over, a mouse over the desk (its box on screen, give or
   // take) gets an X-ray lens: inside a circle round the pointer the set is the
-  // glowing hologram it was built from, the circle ringed in the accent.
+  // glowing hologram it was built from, the circle ringed in the accent. It
+  // opens out of a dot, and closes back into one.
   const ring = document.createElement('div');
   ring.className = 'xray';
   ring.setAttribute('aria-hidden', 'true');
   canvas.after(ring);
-  const lens = { x: -1e4, y: -1e4, mouse: false, k: 0 };
+  const lens = { x: -1e4, y: -1e4, mouse: false, p: 0 }; // p: how far open, 0..1 over OPEN seconds
+  const OPEN = 0.3;
   const lensRadius = () => Math.round(THREE.MathUtils.clamp(w * 0.075, 80, 140)); // CSS px
   const overDesk = () => {
     if (!lens.mouse || !intro.done) return false;
@@ -294,13 +296,14 @@ export function mountScene(canvas: HTMLCanvasElement, hero: HTMLElement, copy: H
   // `dt` 0: jump straight to where it should be
   const updateLens = (dt: number) => {
     const goal = overDesk() ? 1 : 0;
-    lens.k = dt ? lens.k + (goal - lens.k) * Math.min(1, dt * 9) : goal;
-    if (lens.k < 0.002) lens.k = 0;
-    const r = hero.getBoundingClientRect(), R = lensRadius(), dpr = renderer.getPixelRatio();
-    intro.setLens((lens.x - r.left) * dpr, (r.bottom - lens.y) * dpr, R * dpr, lens.k, t);
-    ring.style.opacity = String(lens.k);
-    if (lens.k > 0) {
-      ring.style.width = ring.style.height = `${2 * R}px`;
+    lens.p = dt ? THREE.MathUtils.clamp(lens.p + (goal ? dt : -dt) / OPEN, 0, 1) : goal;
+    // its radius eases out as it opens (and so speeds up into the dot as it closes)
+    const r = hero.getBoundingClientRect(), R = lensRadius() * (1 - Math.pow(1 - lens.p, 3)), dpr = renderer.getPixelRatio();
+    const on = lens.p > 0;
+    intro.setLens((lens.x - r.left) * dpr, (r.bottom - lens.y) * dpr, R * dpr, on ? 1 : 0, t);
+    ring.style.opacity = on ? '1' : '0';
+    if (on) {
+      ring.style.width = ring.style.height = `${(2 * R).toFixed(1)}px`;
       ring.style.transform = `translate(${(lens.x - r.left - R).toFixed(1)}px, ${(lens.y - r.top - R).toFixed(1)}px)`;
     }
   };

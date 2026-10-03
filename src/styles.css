@@ -96,7 +96,7 @@ button { font: inherit; color: inherit; }
   mask-image: linear-gradient(180deg, transparent 0%, #000 9%, #000 90%, transparent 100%);
 }
 /* the X-ray lens over the desk (src/scene/index.ts): the scene draws the
-   hologram inside it; this is its ring and label */
+   hologram inside it; this is its ring */
 .xray {
   position: absolute;
   left: 0;
@@ -109,17 +109,6 @@ button { font: inherit; color: inherit; }
   box-shadow: 0 0 28px color-mix(in srgb, var(--accent) 30%, transparent), inset 0 0 22px color-mix(in srgb, var(--accent) 18%, transparent);
   opacity: 0;
   pointer-events: none;
-}
-.xray::after {
-  content: 'X-RAY';
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  color: var(--accent);
 }
 
 /* header, as on Daru Sim's site: mark, name and role, then the clock and
@@ -246,8 +235,7 @@ h1 {
    with the role and years on the right, then a gallery of rounded panels in
    rows (full width, two thirds and a third, or halves). Screens sit inside
    the panels with padding, or run off an edge (bleed-b, bleed-r), above a
-   grid floor like the hero's, and drift a little with the mouse (both from
-   src/panels.ts). */
+   grid floor like the hero's (src/panels.ts). */
 .work { display: grid; gap: clamp(112px, 13vw, 200px); padding: clamp(64px, 8vw, 120px) var(--gutter) 0; }
 .case { display: grid; gap: clamp(28px, 3.4vw, 44px); min-width: 0; }
 /* the role and company sit at the right on wide screens, under the
@@ -292,16 +280,15 @@ h1 {
   background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 55%, var(--bg)) 0%, var(--panel) 100%);
   overflow: hidden;
   isolation: isolate;
-  perspective: 1600px;
 }
-/* the floor (an SVG drawn to the panel's size, a little larger so it can
-   drift), fading out toward its horizon */
+/* the floor (an SVG drawn to the panel's size), fading out toward its
+   horizon */
 .panel > .floor {
   position: absolute;
   z-index: -1;
-  inset: -12px;
-  width: calc(100% + 24px);
-  height: calc(100% + 24px);
+  inset: 0;
+  width: 100%;
+  height: 100%;
   fill: none;
   stroke-width: 1;
   pointer-events: none;

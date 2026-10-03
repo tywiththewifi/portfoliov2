@@ -58,7 +58,7 @@ Without them the page falls back to Helvetica/Arial and the system monospace.
 | --- | --- |
 | `index.html` | All the copy: hero, the four case studies and the footer. The email address goes in `data-email` on both Email pills, the LinkedIn and resume links in the pills' `href` (`#` shows "coming soon"), the clock's time zone in `data-tz` |
 | `public/work/<project>/` | The case-study screenshots (WebP) and screen recordings (AV1 WebM, H.264 MP4, and a WebP poster each) |
-| `src/panels.ts` | The grid floor behind each case-study screen, and the screens' parallax with the mouse |
+| `src/panels.ts` | The grid floor behind each case-study screen |
 | `src/clips.ts` | Plays the screen recordings while they're on screen, and their play/pause buttons |
 | `src/styles.css` | Tokens (`--bg`, `--panel`, `--text`, `--text-2`, `--muted`, `--mint`) and the layout |
 | `src/main.ts` | Clock, day/night buttons, music button, email copy, toasts, mounting the scene |
@@ -89,12 +89,7 @@ panel beside it, for a tall page that should crop to the row.
 Behind each screen is a grid floor like the hero's, running back to a
 horizon behind the screenshot, with a mint centre line and a glow under the
 screen (`src/panels.ts` draws it to the panel's size; its colours are
-`--floor`, `--glow` and `--axis` in `src/styles.css`). With a mouse, the
-pointer acts like your eye moving: the screens drift the other way and turn
-their near side toward you, and the floor drifts the same way but less, so
-they seem suspended above it; in a row of phones each moves by a different
-amount. Not on touch screens or with
-reduced motion.
+`--floor`, `--glow` and `--axis` in `src/styles.css`).
 
 Each gallery opens with its screen recordings, then the screenshots. The
 recordings are silent loops (`<video data-clip>`): nothing downloads until
@@ -143,9 +138,10 @@ scene appears.
   `mountIntro`. It doesn't react to the music, and there's none with
   reduced motion.
 - X-ray: after the intro, a mouse over the desk gets a lens (a ringed
-  circle round the pointer, labelled X-RAY) that shows the set inside it as
-  the hologram it was built from, lines and grid, and turns the floor grid
-  under it to the line colour. Not on touch screens.
+  circle round the pointer that opens out of a dot and closes back into
+  one) that shows the set inside it as the hologram it was built from,
+  lines and grid, and turns the floor grid under it to the line colour.
+  Not on touch screens.
 
 ## Day and night
 
