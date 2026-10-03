@@ -58,6 +58,8 @@ Without them the page falls back to Helvetica/Arial and the system monospace.
 | --- | --- |
 | `index.html` | All the copy: hero, the four case studies and the footer. The email address goes in `data-email` on both Email pills, the LinkedIn and resume links in the pills' `href` (`#` shows "coming soon"), the clock's time zone in `data-tz` |
 | `public/work/<project>/` | The case-study screenshots (WebP) and screen recordings (AV1 WebM, H.264 MP4, and a WebP poster each) |
+| `src/mark.ts`, `src/mark-geometry.ts` | The header's mark: the TC monogram as a holographic wireframe that spins round every 6–12 s (and when hovered), and its geometry |
+| `scripts/favicon.ts` | Draws the mark at rest into `public/favicon.svg` and `public/mark.svg` (see below) |
 | `src/panels.ts` | The grid floor behind each case-study screen |
 | `src/clips.ts` | Plays the screen recordings while they're on screen, and their play/pause buttons |
 | `src/styles.css` | Tokens (`--bg`, `--panel`, `--text`, `--text-2`, `--muted`, `--mint`) and the layout |
@@ -73,6 +75,28 @@ Without them the page falls back to Helvetica/Arial and the system monospace.
 | `src/scene/props/` | The models: desk, CRT, tower, keyboard and mouse, boombox, mug and cassette case, chair |
 | `src/scene/kit.ts` | Parts builder the models are made with (merged meshes, baked contact shading) |
 | `src/scene/mats.ts` | Scene colours, materials, printed labels |
+
+## The mark and the favicon
+
+The header's mark is the TC monogram as a 3D wireframe in the accent
+colour, over a faint fill, with a soft glow and scanlines (`src/mark.ts`).
+It rests turned a little to show its depth, sways slightly, and spins round
+once every 6–12 seconds or when hovered; with reduced motion it holds
+still, and without WebGL the badge shows plain "TC" text.
+
+The favicon is the same mark drawn flat from the same angle, front edges
+full strength and the rest fainter. After changing the letters in
+`src/mark-geometry.ts`, redraw it:
+
+```sh
+node --experimental-strip-types scripts/favicon.ts
+```
+
+That writes `public/favicon.svg` (on the badge's dark round tile) and
+`public/mark.svg` (the lines alone, for anywhere else the mark is needed).
+`public/favicon-32.png` and `public/apple-touch-icon.png` (180 px, a full
+square, as iOS rounds it) are the SVG rasterised, for browsers and phones
+that don't use SVG icons.
 
 ## Work sections
 

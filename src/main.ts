@@ -3,8 +3,13 @@ import './styles.css';
 import { clickSounds } from './clicks';
 import { createMusic } from './music';
 import { mountClips } from './clips';
+import { mountMark } from './mark';
 import { mountPanels } from './panels';
 import { mountScene, type Mode } from './scene';
+
+// ---------------------------------------------------------------- mark
+// The header's spinning wireframe monogram.
+mountMark(document.querySelector<HTMLElement>('.mark')!);
 
 // ---------------------------------------------------------------- toast
 const toastEl = document.getElementById('toast')!;
