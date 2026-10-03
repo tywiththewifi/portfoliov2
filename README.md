@@ -105,10 +105,11 @@ Safari, plus a WebP poster of the first frame.
 
 How the media was prepared from the originals:
 
-- Phone screenshots and recordings are cropped to the page: the status bar
-  (top 177 px of a 1179 × 2556 screen) and Safari's toolbar (below 2265 px)
-  are cut, leaving 1179 × 2088, then scaled to 720 px wide (screenshots) or
-  640 px wide (recordings)
+- Phone screenshots and recordings keep the whole screen, so they have a
+  phone's proportions, but the status bar (the top 177 px of a 1179 × 2556
+  screen: time, timer, battery, recording dot) is filled with the page's own
+  colour at its corner, frame by frame for the recordings. Then they're
+  scaled to 720 px wide (screenshots) or 640 px wide (recordings)
 - Desktop screenshots are 2000 px wide; desktop recordings 1600 px wide at
   30 fps, with a few pixels of window edge trimmed
 - Recordings are trimmed to clean loops: no static tails, page-load flashes,
